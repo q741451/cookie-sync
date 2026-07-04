@@ -1,52 +1,68 @@
-# Cookie Channel Sync - Go Server
+# Cookie Channel Sync
 
-跟 `server/`（PHP版）功能、接口、安全设计完全对齐的 Go 版本。单文件二进制，
-没有任何运行时依赖（不需要装 PHP、不需要 Composer），配合 GitHub Actions
-可以自动交叉编译出 Linux / macOS / Windows 的可执行文件，不用自己搭编译环境。
+按「频道」分组，把浏览器 Cookie 手动同步到你自己的服务器 —— 单文件 Go 二进制，
+零运行时依赖，配合 Chrome 插件使用。仅供个人 / 小圈子内部使用。
 
-## 和 PHP 版的区别
+> 面向自己的服务器，不追求发布到 Chrome 应用商店。默认不内置 HTTPS，
+> 设计上配合 [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) 或反向代理使用。
 
-- 单进程运行，用进程内互斥锁代替 PHP 的文件锁（flock），逻辑更简单
-- **不内置 HTTPS**（按你的要求），设计上就是要配合 Cloudflare Tunnel 或其他
-  反向代理使用，由外层提供 TLS
-- 限流的"信任代理"逻辑做了泛化：可以指定信任任意一个请求头（比如 Cloudflare
-  的 `CF-Connecting-IP`），而不是只认 `X-Forwarded-For`
-- 接口路径特意保留了 `.php` 后缀（`/api/upload.php` 等），这样同一套 Chrome
-  插件不用改代码就能切换用 PHP 版还是 Go 版
+## 特性
+
+- 📦 **零依赖单文件二进制**，GitHub Actions 自动交叉编译 Linux / macOS / Windows，Release 页直接下载
+- 🔑 **频道名 + 独立密钥**两段式鉴权，密钥 bcrypt 加密存储，只在创建时明文返回一次
+- 👥 **多组人群隔离**，不同频道数据互不干扰，同频道内按域名分组
+- 🛡️ 面向暴力破解 / 计时攻击 / 目录枚举 / umask 权限漏洞做了针对性加固（见下方「安全设计」）
+- 🌐 限流逻辑原生适配 Cloudflare（`CF-Connecting-IP`），Tunnel 模式下无需公网开放端口
+- 🧩 配套 Chrome 插件，手动上传/下载当前网站 Cookie，不做后台自动同步
 
 ## 快速开始
 
-### 本地直接跑（用于测试）
+### 1. 下载可执行文件
+
+去 [Releases](../../releases) 页下载对应平台的文件，比如 Linux 服务器用
+`cookie-sync-server-linux-amd64`。
+
+### 2. 配置
 
 ```bash
-go mod tidy
-go run . -config config.example.json
+chmod +x cookie-sync-server-linux-amd64
+cp config.example.json config.json
 ```
 
-默认监听 `127.0.0.1:8787`。
+打开 `config.json`，**至少把 `registration_secret` 改成一个随机字符串**：
+```bash
+openssl rand -hex 16
+```
 
-### 用 GitHub Actions 自动编译发布
-
-1. 把这个仓库推到你自己的 GitHub
-2. 打一个 tag 并推送：
-   ```bash
-   git tag v1.0.0
-   git push origin v1.0.0
-   ```
-3. Actions 会自动跑起来，编译出 Linux/macOS/Windows 各平台的可执行文件，
-   发布到该 tag 对应的 GitHub Release 里，直接下载就能用，不用自己装Go环境编译
-
-### 部署到 VPS
+### 3. 运行
 
 ```bash
-# 下载对应平台的可执行文件后
-cp config.example.json config.json
-vim config.json   # 至少把 registration_secret 改成随机字符串
-
 ./cookie-sync-server-linux-amd64 -config config.json
 ```
 
-建议用 `systemd` 常驻：
+默认监听 `127.0.0.1:8787`，只在本机可访问。
+
+### 4. 用 Cloudflare Tunnel 对外提供服务（推荐）
+
+```bash
+cloudflared tunnel login
+cloudflared tunnel create cookie-sync
+cloudflared tunnel route dns cookie-sync sync.yourdomain.com
+cloudflared tunnel run --url http://127.0.0.1:8787 cookie-sync
+```
+不需要在服务器上开放任何入站端口，HTTPS 由 Cloudflare 边缘节点提供。
+
+配好 Tunnel 后，`config.json` 里把 `trust_proxy_header` 设为 `"CF-Connecting-IP"`，
+这样限流会按访客真实 IP 生效。**只有在用 Tunnel、源站没有公网可直连端口的前提下
+这样设置才安全**——如果你是直接开放公网端口只是套了层代理，不要这样设，详见
+[go-server/README.md](go-server/README.md) 里的说明。
+
+### 5. 安装 Chrome 插件
+
+加载 `extension/` 目录（`chrome://extensions` → 开发者模式 → 加载已解压的扩展程序），
+打开插件设置页，填服务器地址，创建频道即可开始使用。
+
+## 用 systemd 常驻（生产部署）
 
 ```ini
 # /etc/systemd/system/cookie-sync.service
@@ -64,54 +80,50 @@ Restart=on-failure
 [Install]
 WantedBy=multi-user.target
 ```
-建议专门建一个非 root 用户跑这个服务（`useradd -r -s /sbin/nologin cookiesync`），
-即使程序被攻破，攻击者拿到的权限也有限。
-
-## ⚠️ 关于 Cloudflare（既然你打算用它包一层，这几点务必看完）
-
-### 用 Tunnel，别用"开放端口 + 橙色云朵代理"
-
-**强烈推荐用 Cloudflare Tunnel（`cloudflared`）**，原因：
-
-- Tunnel 是 `cloudflared` 进程主动从你的服务器"拨出去"连 Cloudflare，全程不需要
-  在你的 VPS 上开放任何入站端口。别人根本连不到你的源站IP，也就没有"绕过
-  Cloudflare 直接攻击"这回事。
-- 如果你只是给公网IP套一层 Cloudflare 代理（DNS 记录开橙色云朵），你的源站IP
-  理论上还是能被人间接查到、直接连接的（历史DNS记录、证书透明度日志等途径都
-  可能泄露）。一旦被绕过，Cloudflare 加的所有防护（包括下面说的真实IP）就都
-  失效了。
-
-配置 Tunnel 大致流程（官方文档为准）：
 ```bash
-cloudflared tunnel login
-cloudflared tunnel create cookie-sync
-cloudflared tunnel route dns cookie-sync sync.yourdomain.com
-cloudflared tunnel run --url http://127.0.0.1:8787 cookie-sync
+useradd -r -s /sbin/nologin cookiesync
+systemctl enable --now cookie-sync
 ```
-这样 `config.json` 里 `listen_addr` 保持 `127.0.0.1:8787` 就行，完全不用对公网开端口。
 
-### 要不要设置 `trust_proxy_header`
+## 从源码构建 / 自己发布 Release
 
-- **用 Tunnel**：可以放心把 `trust_proxy_header` 设为 `"CF-Connecting-IP"`，
-  这样限流会按访客真实IP生效，而不是所有人共用一个IP。因为走 Tunnel 的话，
-  攻击者没有任何办法绕过 Cloudflare 直接连你的服务器伪造这个头。
-- **只是套了代理、端口还开着公网**：不建议设置，保持默认空字符串。因为攻击者
-  完全可以直连你的源站IP并自己伪造 `CF-Connecting-IP` 头，这时候"信任"这个头
-  反而是安全隐患，等于限流被架空。
+```bash
+go mod tidy
+go build .
+```
 
-### HTTPS 到底谁来管
+打 tag 会自动触发 CI 交叉编译并发布到 Release：
+```bash
+git tag v1.0.1
+git push origin v1.0.1
+```
 
-不管用 Tunnel 还是普通代理模式，Cloudflare 到访客浏览器这一段的 HTTPS 都是
-Cloudflare 帮你管的。但 Cloudflare 到你源站这一段（"源站到边缘"）也有加密方式的
-选择，在 Cloudflare 后台 SSL/TLS 设置里注意别选成 "Off" 或者来源不校验的模式；
-用 Tunnel 的话这段直接是走 Cloudflare 私有网络隧道，不用操心这个问题，这也是
-推荐用 Tunnel 的另一个原因。
+## 安全设计
 
-## API
+| 风险点 | 应对方式 |
+|---|---|
+| 暴力破解频道密钥 | 基于 IP 的失败次数限流 + bcrypt 慢哈希 |
+| 计时攻击探测频道是否存在 | 频道不存在时也执行一次哑值 bcrypt 校验，抹平耗时差异 |
+| 路径穿越 / 目录枚举 | 频道名 SHA256 哈希后才作为文件名 |
+| 陌生人无限建频道占用资源 | 建频道需要额外的 `registration_secret` 口令 |
+| umask 导致文件权限过松 | 落盘后显式 `chmod 0600`，不依赖系统 umask |
+| 伪造 IP 头绕过限流 | 默认只信任 TCP 连接本身来源，`trust_proxy_header` 需显式配置 |
+| 传输过程明文 | 交给 Cloudflare Tunnel / 反向代理做 TLS，不在本程序范围内 |
 
-跟 PHP 版完全一致，见 `server/README.md` 里的 API 表格，这里不重复。
+更详细的解释和「什么情况下能信任 Cloudflare 的 IP 头」说明，见
+[go-server/README.md](go-server/README.md)。
 
 ## 已知限制
 
-跟 PHP 版一致：数据永久保存不过期、不额外加密存储内容、同频道并发写入同一
-域名是后写覆盖前写。另外 Go 版的限流计数存在内存里，重启进程会清零。
+- 数据永久保存，不自动过期，需要清理请手动删除 `data/channels/` 下对应文件
+- 不对存储内容做额外加密，安全性依赖频道密钥保密 + 文件权限
+- 同频道内多人同时上传同一域名会后写覆盖前写，不做合并
+- 限流计数存在内存里，重启进程会清零
+
+## 目录结构
+
+```
+go-server/    Go 服务端源码 + GitHub Actions 工作流
+extension/    Chrome 插件
+server/       PHP 版实现（历史版本，功能对齐但不再更新，需要的话仍可用）
+```
