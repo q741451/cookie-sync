@@ -1,0 +1,297 @@
+{
+  "extName": {
+    "message": "Cookie Channel Sync"
+  },
+  "extDescription": {
+    "message": "Manually sync cookies for the current site to your own server, grouped by channel."
+  },
+  "popup_uploadBtn": {
+    "message": "⬆️ Upload cookies for this site"
+  },
+  "popup_downloadBtn": {
+    "message": "⬇️ Download cookies for this site"
+  },
+  "popup_settingsBtn": {
+    "message": "Settings: server / channel"
+  },
+  "popup_notWebPage": {
+    "message": "This isn't a regular web page — cookies can't be read here."
+  },
+  "popup_noChannelHint": {
+    "message": "No channel available yet. Click \"Settings\" below to create or join one."
+  },
+  "popup_currentSite": {
+    "message": "Current site: $SITE$",
+    "placeholders": {
+      "site": {
+        "content": "$1"
+      }
+    }
+  },
+  "popup_usingChannelDefault": {
+    "message": "Using channel: $LABEL$ (default)\nServer: $SERVER$",
+    "placeholders": {
+      "label": {
+        "content": "$1"
+      },
+      "server": {
+        "content": "$2"
+      }
+    }
+  },
+  "popup_usingChannelRule": {
+    "message": "Using channel: $LABEL$ (matched by rule)\nServer: $SERVER$",
+    "placeholders": {
+      "label": {
+        "content": "$1"
+      },
+      "server": {
+        "content": "$2"
+      }
+    }
+  },
+  "popup_cannotGetSite": {
+    "message": "Couldn't read info about the current site."
+  },
+  "popup_needSetup": {
+    "message": "No channel available — please finish setup first."
+  },
+  "popup_uploading": {
+    "message": "Uploading..."
+  },
+  "popup_downloading": {
+    "message": "Downloading..."
+  },
+  "popup_uploadSuccess": {
+    "message": "Uploaded $COUNT$ cookie(s) (channel: $LABEL$)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "label": {
+        "content": "$2"
+      }
+    }
+  },
+  "popup_uploadFailed": {
+    "message": "Upload failed: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "popup_downloadFailed": {
+    "message": "Download failed: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "popup_restoreSuccess": {
+    "message": "Restored $OK$/$TOTAL$ cookie(s)\n(channel: $LABEL$, last updated $TIME$)",
+    "placeholders": {
+      "ok": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      },
+      "label": {
+        "content": "$3"
+      },
+      "time": {
+        "content": "$4"
+      }
+    }
+  },
+  "popup_requestError": {
+    "message": "Request failed: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_myChannelsHeading": {
+    "message": "My Channels"
+  },
+  "options_myChannelsDesc": {
+    "message": "Each channel keeps its own server address — different channels can live on entirely different servers."
+  },
+  "options_tableLabel": {
+    "message": "Label"
+  },
+  "options_tableServer": {
+    "message": "Server"
+  },
+  "options_tableChannelName": {
+    "message": "Channel name"
+  },
+  "options_tableKey": {
+    "message": "Key"
+  },
+  "options_tableDefault": {
+    "message": "Default"
+  },
+  "options_joinLegend": {
+    "message": "Join an existing channel"
+  },
+  "options_serverUrlLabel": {
+    "message": "Server address"
+  },
+  "options_serverUrlPlaceholder": {
+    "message": "https://your-domain.com"
+  },
+  "options_channelNameLabel": {
+    "message": "Channel name"
+  },
+  "options_joinChannelNamePlaceholder": {
+    "message": "Channel name from your friend"
+  },
+  "options_channelKeyLabel": {
+    "message": "Channel key"
+  },
+  "options_joinChannelKeyPlaceholder": {
+    "message": "Channel key from your friend"
+  },
+  "options_labelOptional": {
+    "message": "Label (optional, just for your own reference; defaults to the channel name)"
+  },
+  "options_joinLabelPlaceholder": {
+    "message": "e.g. Team"
+  },
+  "options_joinBtn": {
+    "message": "Join"
+  },
+  "options_createLegend": {
+    "message": "Create a new channel"
+  },
+  "options_newChannelNameLabel": {
+    "message": "New channel name"
+  },
+  "options_newChannelNamePlaceholder": {
+    "message": "Pick a name"
+  },
+  "options_registerSecretLabel": {
+    "message": "Registration secret (if the operator set one)"
+  },
+  "options_registerSecretPlaceholder": {
+    "message": "Ask the server operator"
+  },
+  "options_createLabelPlaceholder": {
+    "message": "e.g. Personal"
+  },
+  "options_createBtn": {
+    "message": "Create"
+  },
+  "options_rulesHeading": {
+    "message": "Site Rules"
+  },
+  "options_rulesDesc": {
+    "message": "Sites without a rule use the default channel above. Add a rule here to route specific sites to a specific channel. Domains match by suffix — e.g. entering jd.com automatically matches all subdomains like order.jd.com and www.jd.com."
+  },
+  "options_ruleDomainLabel": {
+    "message": "Domain"
+  },
+  "options_ruleDomainPlaceholder": {
+    "message": "e.g. jd.com"
+  },
+  "options_ruleChannelLabel": {
+    "message": "Use channel"
+  },
+  "options_addRuleBtn": {
+    "message": "Add rule"
+  },
+  "options_ruleTableDomain": {
+    "message": "Domain (incl. subdomains)"
+  },
+  "options_ruleTableChannel": {
+    "message": "Channel"
+  },
+  "options_deleteBtn": {
+    "message": "Delete"
+  },
+  "options_clickToRevealKey": {
+    "message": "Click to reveal the full key"
+  },
+  "options_joinFillAll": {
+    "message": "Please fill in the server address, channel name, and channel key."
+  },
+  "options_insecureWarning": {
+    "message": "Warning: the server address doesn't start with https:// — cookies and the channel key will be sent in plaintext. Using HTTPS is strongly recommended."
+  },
+  "options_joinSuccess": {
+    "message": "Joined channel \"$LABEL$\"",
+    "placeholders": {
+      "label": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_needServerUrl": {
+    "message": "Please fill in the server address."
+  },
+  "options_needChannelName": {
+    "message": "Please fill in a new channel name."
+  },
+  "options_creating": {
+    "message": "Creating..."
+  },
+  "options_createFailed": {
+    "message": "Failed to create: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_createSuccess": {
+    "message": "Created successfully!\nServer: $SERVER$\nChannel name: $NAME$\nChannel key: $KEY$\n\nThe key has been saved in this extension automatically, but you should also back it up somewhere safe (e.g. a password manager) — the server will never show this plaintext key again.",
+    "placeholders": {
+      "server": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      },
+      "key": {
+        "content": "$3"
+      }
+    }
+  },
+  "options_requestError": {
+    "message": "Request failed: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_confirmDeleteChannel": {
+    "message": "Delete channel \"$LABEL$\"? (This only removes the local record in this extension — data on the server is not affected.)",
+    "placeholders": {
+      "label": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_needDomain": {
+    "message": "Please fill in a domain."
+  },
+  "options_needChannelForRule": {
+    "message": "Please create or join at least one channel first."
+  },
+  "options_ruleAdded": {
+    "message": "Rule added: $PATTERN$",
+    "placeholders": {
+      "pattern": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_ruleChannelDeleted": {
+    "message": "(channel deleted)"
+  }
+}

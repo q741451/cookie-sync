@@ -1,33 +1,62 @@
 # Cookie Channel Sync - Chrome Extension
 
-配合同目录下的 PHP 服务端使用，手动上传/下载当前网站的 Cookie，按频道号分组隔离。
+Works together with `go-server/` in this repo. Manually upload/download
+cookies for the current site, grouped and isolated by channel.
 
-## 安装（开发者模式加载）
+The UI follows your browser's language automatically (English and Chinese
+are included; see "Adding a language" below to add more).
 
-1. 打开 `chrome://extensions`
-2. 打开右上角「开发者模式」
-3. 点击「加载已解压的扩展程序」，选择本 `extension/` 文件夹
+## Install (developer mode)
 
-## 使用步骤
+1. Open `chrome://extensions`
+2. Turn on "Developer mode" (top right)
+3. Click "Load unpacked" and select this `extension/` folder
 
-1. 点击插件图标 → 点击「设置服务器 / 频道」，进入设置页
-2. 加入或创建频道（**服务器地址是每个频道各自填的，不同频道可以在不同服务器上**）：
-   - **加入已有频道**：填服务器地址 + 小伙伴给你的频道名 + 密钥，可选起个显示名方便自己区分
-   - **创建新频道**：填服务器地址 + 自己起的新频道名，系统自动生成密钥并保存
-   - 第一个添加的频道会自动成为「默认」，也可以随时在频道列表点其他频道的单选框切换默认
-3. （可选）需要某些网站走特定频道时，在「网站规则」里加一条，比如域名填 `jd.com`、
-   选择对应频道 —— 这样 `order.jd.com`、`www.jd.com` 等所有 `jd.com` 的子域名都会自动
-   走这个频道，不用逐个网站配置。没配规则的网站统一走默认频道。
-4. 回到任意网站，点击插件图标，会显示当前网站将使用哪个频道、走哪个服务器：
-   - 「⬆️ 上传当前网站Cookie」：把当前网站的 Cookie 推送到对应频道
-   - 「⬇️ 下载当前网站Cookie」：从对应频道拉取该网站的 Cookie 并写回浏览器
+## Usage
 
-## 注意
+1. Click the extension icon, then click "Settings: server / channel"
+2. Add a channel. **The server address belongs to the channel itself** —
+   different channels can point to entirely different servers:
+   - **Join an existing channel**: enter the server address plus the
+     channel name and key someone shared with you; optionally give it a
+     label just for your own reference
+   - **Create a new channel**: enter the server address and a new channel
+     name; the server generates a key for you automatically
+   - The first channel you add becomes the default automatically; you can
+     switch the default anytime from the channel table
+3. (Optional) Add a site rule if some sites should use a specific channel
+   instead of the default — e.g. domain `jd.com` mapped to a channel will
+   automatically match every subdomain like `order.jd.com` and `www.jd.com`.
+   Sites without a matching rule always use the default channel.
+4. On any site, click the extension icon — it shows which channel and
+   server will be used:
+   - "Upload cookies for this site": pushes this site's cookies to that
+     channel
+   - "Download cookies for this site": pulls cookies for this site from
+     that channel and writes them back into the browser
 
-- 同一频道内的人都可以读写彼此上传的 Cookie，请只把频道名+密钥分享给信任的人
-- 频道密钥只在创建时显示一次，请务必自己额外备份（比如存进密码管理器）
-- 下载 Cookie 会覆盖你浏览器里对应域名的同名 Cookie，请确认清楚再操作
-- 网站规则按域名"后缀"匹配（`jd.com` 会匹配所有 `*.jd.com`），多条规则同时匹配时，
-  插件会选最精确（最长）的那一条
-- 老版本的配置（无论是单频道还是共享服务器地址的多频道）打开插件时会自动迁移，
-  不需要手动重新填写
+## Notes
+
+- Everyone who has a channel's name + key can read and write its data —
+  only share these with people you trust
+- The channel key is shown in plaintext only once, at creation time —
+  back it up somewhere safe (e.g. a password manager)
+- Downloading overwrites same-name cookies already set for that domain in
+  your browser — make sure that's what you want
+- Site rules match by domain **suffix** (`jd.com` matches all `*.jd.com`);
+  when multiple rules match, the most specific (longest) one wins
+- Older versions of this extension's local data (single channel, or
+  multiple channels sharing one server) are migrated automatically the
+  first time you open the extension — nothing to redo by hand
+
+## Adding a language
+
+Translations live under `_locales/<lang>/messages.json`
+(see [Chrome's i18n docs](https://developer.chrome.com/docs/extensions/reference/api/i18n)
+for supported language codes). To add one:
+
+1. Copy `_locales/en/messages.json` into a new `_locales/<lang>/messages.json`
+2. Translate the `message` values (keep the `$PLACEHOLDER$` tokens and the
+   `placeholders` blocks exactly as they are)
+3. Reload the extension — Chrome picks the locale automatically based on
+   your browser's language settings

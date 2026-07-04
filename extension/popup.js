@@ -19,8 +19,9 @@ function normalizeSameSite(v) {
   return allowed.includes(v) ? v : 'lax';
 }
 
-// 当前网站的 hostname，以及按"网站规则→默认频道"解析出来的频道对象
-// （频道对象里自带 serverUrl/channelName/channelKey，不再依赖全局服务器地址）
+// Current site's hostname, and the channel resolved via "site rules -> default
+// channel" (the channel object carries its own serverUrl/channelName/channelKey,
+// no global server address involved anymore).
 let currentHostname = null;
 let resolvedChannel = null;
 
@@ -31,7 +32,7 @@ async function init() {
     const tab = await getCurrentTab();
     const url = new URL(tab.url);
     if (!/^https?:$/.test(url.protocol)) {
-      domainEl.textContent = '当前页面不是普通网页，无法读取Cookie';
+      domainEl.textContent = t('popup_notWebPage');
       channelEl.textContent = '';
       return;
     }
@@ -40,18 +41,18 @@ async function init() {
     const channelId = matchChannelForHost(currentHostname, cfg);
     resolvedChannel = channelId ? cfg.channels[channelId] : null;
 
-    domainEl.textContent = `当前网站：${currentHostname}`;
+    domainEl.textContent = t('popup_currentSite', [currentHostname]);
 
     if (!resolvedChannel) {
-      channelEl.textContent = '没有可用频道，请先点击下方"设置"创建/加入一个';
+      channelEl.textContent = t('popup_noChannelHint');
     } else {
       const viaRule = isRuleMatch(currentHostname, cfg, channelId);
-      channelEl.textContent =
-        `使用频道：${resolvedChannel.label}${viaRule ? '（按规则匹配）' : '（默认频道）'}\n` +
-        `服务器：${resolvedChannel.serverUrl}`;
+      channelEl.textContent = viaRule
+        ? t('popup_usingChannelRule', [resolvedChannel.label, resolvedChannel.serverUrl])
+        : t('popup_usingChannelDefault', [resolvedChannel.label, resolvedChannel.serverUrl]);
     }
   } catch (e) {
-    domainEl.textContent = '无法获取当前网站信息';
+    domainEl.textContent = t('popup_cannotGetSite');
   }
 }
 
@@ -65,20 +66,21 @@ document.getElementById('upload').addEventListener('click', async () => {
   await initPromise;
 
   if (!resolvedChannel) {
-    statusEl.textContent = '没有可用频道，请先完成设置';
+    statusEl.textContent = t('popup_needSetup');
     return;
   }
 
   const tab = await getCurrentTab();
-  statusEl.textContent = '上传中...';
+  statusEl.textContent = t('popup_uploading');
   try {
-    // 用 URL 查询而不是用域名字符串查询：
-    // chrome.cookies.getAll({domain}) 只会匹配该域名"及其子域名"的cookie，
-    // 查不到设在父域上的cookie。用 {url: 完整页面地址} 查询，
-    // 等价于"浏览器打开这个页面时实际会带上哪些cookie"，天然包含父域cookie。
+    // Query by URL rather than by domain string:
+    // chrome.cookies.getAll({domain}) only matches that domain and its
+    // subdomains, so it misses cookies set on a parent domain. Querying by
+    // {url: full page address} matches what the browser would actually send
+    // for that page, which naturally includes parent-domain cookies.
     const cookies = await chrome.cookies.getAll({ url: tab.url });
 
-    const res = await fetch(`${resolvedChannel.serverUrl}/api/upload.php`, {
+    const res = await fetch(`${resolvedChannel.serverUrl}/api/upload`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -89,10 +91,10 @@ document.getElementById('upload').addEventListener('click', async () => {
     const json = await res.json();
 
     statusEl.textContent = res.ok
-      ? `已上传 ${json.count} 个 Cookie（频道：${resolvedChannel.label}）`
-      : '上传失败：' + json.error;
+      ? t('popup_uploadSuccess', [String(json.count), resolvedChannel.label])
+      : t('popup_uploadFailed', [json.error]);
   } catch (e) {
-    statusEl.textContent = '请求出错：' + e.message;
+    statusEl.textContent = t('popup_requestError', [e.message]);
   }
 });
 
@@ -100,20 +102,20 @@ document.getElementById('download').addEventListener('click', async () => {
   await initPromise;
 
   if (!resolvedChannel) {
-    statusEl.textContent = '没有可用频道，请先完成设置';
+    statusEl.textContent = t('popup_needSetup');
     return;
   }
 
-  statusEl.textContent = '下载中...';
+  statusEl.textContent = t('popup_downloading');
   try {
     const res = await fetch(
-      `${resolvedChannel.serverUrl}/api/download.php?domain=${encodeURIComponent(currentHostname)}`,
+      `${resolvedChannel.serverUrl}/api/download?domain=${encodeURIComponent(currentHostname)}`,
       { headers: authHeaders(resolvedChannel.channelName, resolvedChannel.channelKey) }
     );
     const json = await res.json();
 
     if (!res.ok) {
-      statusEl.textContent = '下载失败：' + json.error;
+      statusEl.textContent = t('popup_downloadFailed', [json.error]);
       return;
     }
 
@@ -134,13 +136,18 @@ document.getElementById('download').addEventListener('click', async () => {
         });
         okCount++;
       } catch (err) {
-        console.warn('设置 cookie 失败:', c.name, err);
+        console.warn('failed to set cookie:', c.name, err);
       }
     }
 
     const updatedAt = new Date(json.updated_at * 1000).toLocaleString();
-    statusEl.textContent = `已恢复 ${okCount}/${json.cookies.length} 个 Cookie\n（频道：${resolvedChannel.label}，更新于 ${updatedAt}）`;
+    statusEl.textContent = t('popup_restoreSuccess', [
+      String(okCount),
+      String(json.cookies.length),
+      resolvedChannel.label,
+      updatedAt,
+    ]);
   } catch (e) {
-    statusEl.textContent = '请求出错：' + e.message;
+    statusEl.textContent = t('popup_requestError', [e.message]);
   }
 });

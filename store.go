@@ -13,13 +13,13 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// DomainEntry 是某个频道下、某个域名对应的 cookie 数据
+// DomainEntry holds the cookie data for one domain within one channel.
 type DomainEntry struct {
 	Cookies   []map[string]interface{} `json:"cookies"`
 	UpdatedAt int64                     `json:"updated_at"`
 }
 
-// ChannelData 是一个频道文件的完整内容
+// ChannelData is the full content of one channel's file on disk.
 type ChannelData struct {
 	ChannelName string                 `json:"channel_name"`
 	KeyHash     string                 `json:"key_hash"`
@@ -32,13 +32,13 @@ var (
 	ErrChannelNotFound = errors.New("channel not found")
 )
 
-// Store 负责频道数据的读写。
+// Store handles reading and writing channel data.
 //
-// 注意：这里的并发安全依赖"同一份数据目录只被一个 Store 实例（也就是一个
-// 运行中的进程）访问"这个前提，用的是进程内互斥锁，而不是跨进程文件锁。
-// 正常使用场景下你只会启动一个 cookie-sync-go 进程，这个前提天然成立；
-// 千万不要用同一个 data 目录同时跑两个实例（比如手滑开了两个），
-// 否则并发写入依然可能冲突。
+// Concurrency safety here relies on "only one process (this one) accessing
+// a given data directory at a time" — it uses in-process mutexes, not
+// cross-process file locks. That assumption holds as long as you only run a
+// single cookie-sync-go process. Do not point two running instances at the
+// same data directory; concurrent writes could still race.
 type Store struct {
 	dataDir   string
 	mu        sync.Mutex
@@ -50,7 +50,7 @@ func NewStore(dataDir string) (*Store, error) {
 	if err := os.MkdirAll(channelsDir, 0700); err != nil {
 		return nil, err
 	}
-	// 显式修正权限，不依赖系统 umask
+	// Explicitly fix permissions instead of relying on umask.
 	if err := os.Chmod(channelsDir, 0700); err != nil {
 		return nil, err
 	}
@@ -65,9 +65,10 @@ func channelHash(name string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// channelFile 用频道名的 SHA256 哈希作为文件名，而不是原始频道名：
-// 1. 防止路径穿越（比如频道名里塞 ../../ 之类的字符）
-// 2. 防止别人靠遍历 data 目录的文件名反推出频道名
+// channelFile uses the SHA256 hash of the channel name as the filename
+// instead of the raw name:
+//  1. Prevents path traversal (e.g. a channel name containing ../../).
+//  2. Prevents recovering channel names by listing the data directory.
 func (s *Store) channelFile(name string) string {
 	return filepath.Join(s.dataDir, "channels", channelHash(name)+".json")
 }
@@ -107,8 +108,8 @@ func (s *Store) readChannelFile(file string) (*ChannelData, error) {
 	return &data, nil
 }
 
-// writeChannelFile 用"写临时文件 + 原子 rename"的方式落盘，
-// 避免进程崩溃或掉电导致文件写到一半而损坏。
+// writeChannelFile writes via a temp file + atomic rename, so a crash or
+// power loss mid-write can't leave a corrupted file behind.
 func (s *Store) writeChannelFile(file string, data *ChannelData) error {
 	b, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
@@ -119,7 +120,8 @@ func (s *Store) writeChannelFile(file string, data *ChannelData) error {
 	if err := os.WriteFile(tmp, b, 0600); err != nil {
 		return err
 	}
-	// 显式修正权限，不依赖 umask：这个文件存着 bcrypt 密钥哈希和所有 cookie 数据
+	// Explicitly fix permissions instead of relying on umask: this file
+	// holds the bcrypt key hash and all cookie data for the channel.
 	if err := os.Chmod(tmp, 0600); err != nil {
 		os.Remove(tmp)
 		return err
@@ -131,8 +133,9 @@ func (s *Store) writeChannelFile(file string, data *ChannelData) error {
 	return nil
 }
 
-// CreateChannel 创建新频道。用互斥锁 + 创建前二次检查存在性来避免竞态：
-// 同一进程内对同一频道名的并发创建请求会被锁串行化，不会出现互相覆盖。
+// CreateChannel creates a new channel. The per-channel mutex plus an
+// existence check right before creating avoids a race where two concurrent
+// create requests for the same name could overwrite each other.
 func (s *Store) CreateChannel(name, key string, bcryptCost int) (*ChannelData, error) {
 	lock := s.lockFor(name)
 	lock.Lock()
@@ -170,7 +173,8 @@ func (s *Store) ReadChannel(name string) (*ChannelData, error) {
 	return s.readChannelFile(s.channelFile(name))
 }
 
-// UpsertDomain 覆盖式写入某个域名下的 cookie 数据（同频道内后写覆盖前写，不做合并）
+// UpsertDomain writes cookie data for a domain within a channel.
+// Later writes overwrite earlier ones for the same domain; no merging.
 func (s *Store) UpsertDomain(name, domain string, cookies []map[string]interface{}) error {
 	lock := s.lockFor(name)
 	lock.Lock()

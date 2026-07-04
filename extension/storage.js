@@ -1,15 +1,17 @@
 /**
- * 共享的存储 / 迁移 / 匹配逻辑，popup.html 和 options.html 都会加载这个文件。
+ * Shared storage / migration / matching logic used by both popup.html and
+ * options.html.
  *
- * 存储结构（v3，服务器地址跟着频道走）：
+ * Storage shape (v3, server address travels with the channel):
  *   channelsV2: {
- *     [频道ID]: { label, serverUrl, channelName, channelKey }
+ *     [channelId]: { label, serverUrl, channelName, channelKey }
  *   }
- *   defaultChannelId: string          默认使用哪个频道（channelsV2 里的某个ID）
- *   rulesV2: [{ pattern: "jd.com", channelId: "..." }]   网站规则，按域名后缀匹配
+ *   defaultChannelId: string          which channel is used by default
+ *   rulesV2: [{ pattern: "jd.com", channelId: "..." }]   site rules, matched by domain suffix
  *
- * 频道ID是内部随机生成的，跟频道名本身没有关系——因为不同服务器上完全可能
- * 存在同名频道，不能用频道名当唯一标识。
+ * Channel IDs are randomly generated locally and have nothing to do with the
+ * channel name itself — different servers can easily have channels that
+ * share the same name, so the name alone can't be a unique key.
  */
 
 function genId() {
@@ -17,23 +19,24 @@ function genId() {
   return 'ch_' + Date.now() + '_' + Math.random().toString(16).slice(2);
 }
 
-// 兼容老版本插件数据，自动迁移到新结构，不会丢失已有配置：
-//  - 最早版本：单个 serverUrl / channelName / channelKey
-//  - 上一版：共享一个 serverUrl，多个 channels{name:key} + rules[{pattern,channel}]
-//  - 本版：每个频道自带各自的 serverUrl
+// Migrate older extension data formats so nothing gets lost:
+//  - earliest version: a single serverUrl / channelName / channelKey
+//  - previous version: multiple channels{name:key} sharing one serverUrl,
+//    plus rules[{pattern,channel}]
+//  - this version: every channel carries its own serverUrl
 async function migrateIfNeeded() {
   const data = await chrome.storage.local.get([
     'channelsV2', 'defaultChannelId', 'rulesV2',
     'channels', 'serverUrl', 'defaultChannel', 'rules',
     'channelName', 'channelKey',
   ]);
-  if (data.channelsV2) return; // 已经是最新格式
+  if (data.channelsV2) return; // already on the latest format
 
   const channelsV2 = {};
   const idByOldName = {};
 
   if (data.channels) {
-    // 上一版：多频道，共享一个 serverUrl
+    // previous version: multiple channels sharing one serverUrl
     const serverUrl = data.serverUrl || '';
     for (const [name, key] of Object.entries(data.channels)) {
       const id = genId();
@@ -41,7 +44,7 @@ async function migrateIfNeeded() {
       idByOldName[name] = id;
     }
   } else if (data.channelName && data.channelKey) {
-    // 最早版本：单频道
+    // earliest version: a single channel
     const id = genId();
     channelsV2[id] = {
       label: data.channelName,
@@ -76,8 +79,9 @@ async function getFullConfig() {
   };
 }
 
-// 找到某个 hostname 应该用哪个频道ID：规则按"域名后缀"匹配，
-// 多条规则都匹配时选最长（最精确）的那条；都不匹配就用默认频道。
+// Resolve which channel ID a hostname should use: rules match by domain
+// suffix, and when multiple rules match, the longest (most specific) one
+// wins; otherwise fall back to the default channel.
 function matchChannelForHost(hostname, cfg) {
   let best = null;
   for (const rule of cfg.rules) {
@@ -89,7 +93,8 @@ function matchChannelForHost(hostname, cfg) {
   return best ? best.channelId : cfg.defaultChannelId;
 }
 
-// 当前网站命中的是不是一条具体规则（而不是默认频道），仅用于UI提示
+// Whether the current site matched a specific rule (as opposed to falling
+// back to the default channel) — used only for UI display.
 function isRuleMatch(hostname, cfg, channelId) {
   return cfg.rules.some(r =>
     r.channelId === channelId &&
@@ -97,8 +102,8 @@ function isRuleMatch(hostname, cfg, channelId) {
   );
 }
 
-// 新增或更新一个频道。传 id 为已有频道时是更新，传空字符串/null 时新建。
-// 返回最终使用的频道ID。
+// Create or update a channel. Pass an existing id to update it, or an empty
+// string/null to create a new one. Returns the id that was used.
 async function saveChannel(id, { label, serverUrl, channelName, channelKey }) {
   const cfg = await getFullConfig();
   const finalId = id || genId();
@@ -111,7 +116,7 @@ async function saveChannel(id, { label, serverUrl, channelName, channelKey }) {
   };
 
   let defaultChannelId = cfg.defaultChannelId;
-  if (!defaultChannelId) defaultChannelId = finalId; // 第一个频道自动成为默认
+  if (!defaultChannelId) defaultChannelId = finalId; // first channel becomes default automatically
 
   await chrome.storage.local.set({ channelsV2: cfg.channels, defaultChannelId });
   return finalId;
@@ -141,7 +146,7 @@ async function setDefaultChannel(id) {
 
 async function addRule(pattern, channelId) {
   const cfg = await getFullConfig();
-  const rules = cfg.rules.filter(r => r.pattern !== pattern); // 同一个pattern只保留最新一条
+  const rules = cfg.rules.filter(r => r.pattern !== pattern); // keep only the latest entry per pattern
   rules.push({ pattern, channelId });
   await chrome.storage.local.set({ rulesV2: rules });
 }

@@ -30,15 +30,15 @@ function isLikelySecure(url) {
 }
 
 function maskKey(key) {
-  if (!key || key.length <= 8) return '••••';
-  return key.slice(0, 4) + '…' + key.slice(-4);
+  if (!key || key.length <= 8) return '\u2022\u2022\u2022\u2022';
+  return key.slice(0, 4) + '\u2026' + key.slice(-4);
 }
 
 async function render() {
   const cfg = await getFullConfig();
   const ids = Object.keys(cfg.channels);
 
-  // 频道表格
+  // Channel table
   els.channelTbody.innerHTML = '';
   for (const id of ids) {
     const ch = cfg.channels[id];
@@ -55,7 +55,7 @@ async function render() {
 
     const tdKey = document.createElement('td');
     tdKey.textContent = maskKey(ch.channelKey);
-    tdKey.title = '点击显示完整密钥';
+    tdKey.title = t('options_clickToRevealKey');
     tdKey.style.cursor = 'pointer';
     tdKey.addEventListener('click', () => { tdKey.textContent = ch.channelKey; });
 
@@ -73,10 +73,10 @@ async function render() {
 
     const tdDel = document.createElement('td');
     const delBtn = document.createElement('button');
-    delBtn.textContent = '删除';
+    delBtn.textContent = t('options_deleteBtn');
     delBtn.className = 'danger';
     delBtn.addEventListener('click', async () => {
-      if (!confirm(`确定删除频道 "${ch.label}" 吗？（只是从本插件移除记录，服务器上的数据不受影响）`)) return;
+      if (!confirm(t('options_confirmDeleteChannel', [ch.label]))) return;
       await deleteChannel(id);
       render();
     });
@@ -86,16 +86,16 @@ async function render() {
     els.channelTbody.appendChild(tr);
   }
 
-  // 规则里的频道下拉框
+  // Channel dropdown for the rule form
   els.ruleChannelSelect.innerHTML = '';
   for (const id of ids) {
     const opt = document.createElement('option');
     opt.value = id;
-    opt.textContent = `${cfg.channels[id].label}（${cfg.channels[id].serverUrl}）`;
+    opt.textContent = `${cfg.channels[id].label} (${cfg.channels[id].serverUrl})`;
     els.ruleChannelSelect.appendChild(opt);
   }
 
-  // 规则表格
+  // Rule table
   els.ruleTbody.innerHTML = '';
   for (const rule of cfg.rules) {
     const tr = document.createElement('tr');
@@ -105,11 +105,11 @@ async function render() {
 
     const tdChannel = document.createElement('td');
     const ch = cfg.channels[rule.channelId];
-    tdChannel.textContent = ch ? `${ch.label}（${ch.serverUrl}）` : '（频道已被删除）';
+    tdChannel.textContent = ch ? `${ch.label} (${ch.serverUrl})` : t('options_ruleChannelDeleted');
 
     const tdDel = document.createElement('td');
     const delBtn = document.createElement('button');
-    delBtn.textContent = '删除';
+    delBtn.textContent = t('options_deleteBtn');
     delBtn.className = 'danger';
     delBtn.addEventListener('click', async () => {
       await deleteRule(rule.pattern);
@@ -124,7 +124,7 @@ async function render() {
 
 function warnIfInsecure(url) {
   if (!isLikelySecure(url)) {
-    els.status.textContent = '警告：服务器地址不是 https:// 开头，Cookie和频道密钥会在网络上明文传输，强烈建议改用HTTPS。';
+    els.status.textContent = t('options_insecureWarning');
     return true;
   }
   return false;
@@ -137,7 +137,7 @@ els.joinBtn.addEventListener('click', async () => {
   const label = els.joinLabel.value.trim();
 
   if (!serverUrl || !name || !key) {
-    els.status.textContent = '请把服务器地址、频道名、频道密钥都填上';
+    els.status.textContent = t('options_joinFillAll');
     return;
   }
 
@@ -150,7 +150,7 @@ els.joinBtn.addEventListener('click', async () => {
   els.joinKey.value = '';
   els.joinLabel.value = '';
 
-  if (!warned) els.status.textContent = `已加入频道 "${label || name}"`;
+  if (!warned) els.status.textContent = t('options_joinSuccess', [label || name]);
   render();
 });
 
@@ -160,23 +160,23 @@ els.createNew.addEventListener('click', async () => {
   const label = els.createLabel.value.trim();
 
   if (!serverUrl) {
-    els.status.textContent = '请填写服务器地址';
+    els.status.textContent = t('options_needServerUrl');
     return;
   }
   if (!name) {
-    els.status.textContent = '请填写新频道名';
+    els.status.textContent = t('options_needChannelName');
     return;
   }
 
   const warned = warnIfInsecure(serverUrl);
-  if (!warned) els.status.textContent = '创建中...';
+  if (!warned) els.status.textContent = t('options_creating');
 
   try {
     const headers = { 'Content-Type': 'application/json' };
     const secret = els.registerSecret.value.trim();
     if (secret) headers['X-Register-Secret'] = secret;
 
-    const res = await fetch(`${serverUrl}/api/create_channel.php`, {
+    const res = await fetch(`${serverUrl}/api/create_channel`, {
       method: 'POST',
       headers,
       body: JSON.stringify({ channel_name: name }),
@@ -184,7 +184,7 @@ els.createNew.addEventListener('click', async () => {
     const json = await res.json();
 
     if (!res.ok) {
-      els.status.textContent = '创建失败：' + (json.error || res.status);
+      els.status.textContent = t('options_createFailed', [json.error || String(res.status)]);
       return;
     }
 
@@ -199,13 +199,10 @@ els.createNew.addEventListener('click', async () => {
     els.registerSecret.value = '';
     els.createLabel.value = '';
 
-    els.status.textContent =
-      `创建成功！\n服务器：${serverUrl}\n频道名：${json.channel_name}\n频道密钥：${json.channel_key}\n\n` +
-      `密钥已自动保存到本插件，但强烈建议你自己再抄一份到安全的地方（比如密码管理器），` +
-      `因为服务器不会再次显示这个明文密钥。`;
+    els.status.textContent = t('options_createSuccess', [serverUrl, json.channel_name, json.channel_key]);
     render();
   } catch (e) {
-    els.status.textContent = '请求出错：' + e.message;
+    els.status.textContent = t('options_requestError', [e.message]);
   }
 });
 
@@ -214,17 +211,17 @@ els.addRuleBtn.addEventListener('click', async () => {
   const channelId = els.ruleChannelSelect.value;
 
   if (!pattern) {
-    els.status.textContent = '请填写域名';
+    els.status.textContent = t('options_needDomain');
     return;
   }
   if (!channelId) {
-    els.status.textContent = '请先创建/加入至少一个频道';
+    els.status.textContent = t('options_needChannelForRule');
     return;
   }
 
   await addRule(pattern, channelId);
   els.ruleDomain.value = '';
-  els.status.textContent = `已添加规则：${pattern}`;
+  els.status.textContent = t('options_ruleAdded', [pattern]);
   render();
 });
 

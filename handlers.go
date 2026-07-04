@@ -18,7 +18,7 @@ type Server struct {
 	cfg       Config
 	store     *Store
 	rl        *RateLimiter
-	dummyHash []byte // 用于时序安全校验的固定哑值哈希，见 authenticate() 说明
+	dummyHash []byte // fixed dummy hash used for timing-safe auth checks, see authenticate()
 }
 
 func NewServer(cfg Config, store *Store, rl *RateLimiter) *Server {
@@ -61,9 +61,10 @@ func (s *Server) handleCreateChannel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 建频道口令：站长自己保管的"总闸"，跟频道密钥是两回事。
-	// 频道密钥给小伙伴用来读写数据；这个口令只有站长知道，
-	// 用来防止陌生人对着你的服务器无限建频道。
+	// Registration secret: the operator's own "master switch", separate
+	// from channel keys. Channel keys are shared with group members to
+	// read/write data; this secret is known only to the operator, and
+	// prevents strangers from creating unlimited channels on your server.
 	if s.cfg.RegistrationSecret != "" {
 		provided := r.Header.Get("X-Register-Secret")
 		if subtle.ConstantTimeCompare([]byte(provided), []byte(s.cfg.RegistrationSecret)) != 1 {
@@ -119,11 +120,14 @@ func (s *Server) handleCreateChannel(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// authenticate 校验 X-Channel-Name / X-Channel-Key，失败计入限流。
+// authenticate checks X-Channel-Name / X-Channel-Key, recording failures
+// against the rate limiter.
 //
-// 时序安全：无论频道是否存在，都会执行一次 bcrypt 校验运算（不存在时用固定的
-// 哑值哈希），让"频道不存在"和"频道存在但密钥错了"这两种情况耗时基本一致，
-// 防止攻击者通过测量响应时间来探测哪些频道名是真实存在的。
+// Timing safety: a bcrypt check always runs, even when the channel doesn't
+// exist (against a fixed dummy hash), so "channel doesn't exist" and
+// "channel exists but key is wrong" take roughly the same time. This
+// prevents an attacker from telling which channel names are real just by
+// measuring response latency.
 func (s *Server) authenticate(w http.ResponseWriter, r *http.Request) (*ChannelData, bool) {
 	ip := clientIP(r, s.cfg.TrustProxyHeader)
 	if !s.rl.Allowed(ip) {

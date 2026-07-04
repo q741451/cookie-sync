@@ -20,10 +20,10 @@ func main() {
 	}
 
 	if cfg.RegistrationSecret == "" {
-		log.Println("⚠️  警告：registration_secret 为空，任何人都能对本服务器无限创建频道，生产环境强烈建议设置")
+		log.Println("WARNING: registration_secret is empty. Anyone can create unlimited channels on this server. Set one before exposing this to the internet.")
 	}
 	if cfg.TrustProxyHeader != "" {
-		log.Printf("⚠️  已配置信任请求头 %q 作为客户端IP来源，请确认这个头不会被绕过伪造（详见 README「关于 Cloudflare」一节）", cfg.TrustProxyHeader)
+		log.Printf("WARNING: trusting header %q as the client IP source. Make sure this header cannot be spoofed by bypassing your proxy (see README, section \"About Cloudflare\").", cfg.TrustProxyHeader)
 	}
 
 	store, err := NewStore(cfg.DataDir)
@@ -35,16 +35,13 @@ func main() {
 	srv := NewServer(cfg, store, rl)
 
 	mux := http.NewServeMux()
-	// 接口路径特意保留 .php 后缀，是为了跟同项目里的 Chrome 插件 100% 兼容——
-	// 插件只认这几个路径字符串，并不关心背后到底是 PHP 还是 Go 在处理，
-	// 这样切换后端时插件端不用改一行代码。
-	mux.HandleFunc("/api/create_channel.php", srv.handleCreateChannel)
-	mux.HandleFunc("/api/upload.php", srv.handleUpload)
-	mux.HandleFunc("/api/download.php", srv.handleDownload)
-	mux.HandleFunc("/api/list_domains.php", srv.handleListDomains)
+	mux.HandleFunc("/api/create_channel", srv.handleCreateChannel)
+	mux.HandleFunc("/api/upload", srv.handleUpload)
+	mux.HandleFunc("/api/download", srv.handleDownload)
+	mux.HandleFunc("/api/list_domains", srv.handleListDomains)
 
-	log.Printf("cookie-sync-go 正在监听 %s", cfg.ListenAddr)
-	log.Printf("本程序不内置 HTTPS，请通过 Cloudflare Tunnel 或反向代理来提供 TLS，不要把 %s 直接暴露在公网上", cfg.ListenAddr)
+	log.Printf("cookie-sync-go listening on %s", cfg.ListenAddr)
+	log.Printf("This binary does not terminate TLS itself. Put it behind Cloudflare Tunnel or a reverse proxy; do not expose %s directly to the internet.", cfg.ListenAddr)
 
 	if err := http.ListenAndServe(cfg.ListenAddr, mux); err != nil {
 		log.Fatalf("server stopped: %v", err)

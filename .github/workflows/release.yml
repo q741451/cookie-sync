@@ -1,6 +1,6 @@
 name: Release
 
-# 推送形如 v1.0.0 的 tag 时触发：
+# Triggered by pushing a tag like v1.0.0:
 #   git tag v1.0.0
 #   git push origin v1.0.0
 on:

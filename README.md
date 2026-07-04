@@ -1,48 +1,53 @@
 # Cookie Channel Sync
 
-按「频道」分组，把浏览器 Cookie 手动同步到你自己的服务器 —— 单文件 Go 二进制，
-零运行时依赖，配合 Chrome 插件使用。仅供个人 / 小圈子内部使用。
+[English](README.md) | [中文](README.zh-CN.md)
 
-> 面向自己的服务器，不追求发布到 Chrome 应用商店。默认不内置 HTTPS，
-> 设计上配合 [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) 或反向代理使用。
+Sync browser cookies to your own server, grouped by "channel" — a single-file
+Go binary plus a Chrome extension, for personal / small-group use.
 
-## 特性
+> Built for your own server, not for the Chrome Web Store. No built-in HTTPS
+> by design — meant to sit behind [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)
+> or another reverse proxy.
 
-- 📦 **零依赖单文件二进制**，GitHub Actions 自动交叉编译 Linux / macOS / Windows，Release 页直接下载
-- 🔑 **频道名 + 独立密钥**两段式鉴权，密钥 bcrypt 加密存储，只在创建时明文返回一次
-- 👥 **多组人群隔离**，不同频道数据互不干扰，同频道内按域名分组
-- 🛡️ 面向暴力破解 / 计时攻击 / 目录枚举 / umask 权限漏洞做了针对性加固（见下方「安全设计」）
-- 🌐 限流逻辑原生适配 Cloudflare（`CF-Connecting-IP`），Tunnel 模式下无需公网开放端口
-- 🧩 配套 Chrome 插件，手动上传/下载当前网站 Cookie，不做后台自动同步
+## Features
 
-## 快速开始
+- 📦 **Zero-dependency single binary** — GitHub Actions cross-compiles Linux / macOS / Windows builds, download straight from Releases
+- 🔑 **Channel name + separate key** two-factor auth; keys are bcrypt-hashed at rest and shown in plaintext only once
+- 👥 **Per-channel isolation** — each channel keeps its own server address, so different groups (or even different servers) never mix; sites can be routed to specific channels via rules, everything else falls back to a default channel
+- 🛡️ Hardened against brute force, timing attacks, path traversal, and umask-related permission leaks (see "Security design" below)
+- 🌐 Rate limiting understands Cloudflare (`CF-Connecting-IP`) natively — no public port needed at all when using Tunnel
+- 🌍 Extension UI available in English and Chinese, following your browser's language
+- 🧩 Manual upload/download only — no background auto-sync
 
-### 1. 下载可执行文件
+## Quick start
 
-去 [Releases](../../releases) 页下载对应平台的文件，比如 Linux 服务器用
-`cookie-sync-server-linux-amd64`。
+### 1. Download the server binary
 
-### 2. 配置
+Grab the build for your platform from [Releases](../../releases), e.g.
+`cookie-sync-server-linux-amd64` for a Linux VPS.
+
+### 2. Configure
 
 ```bash
 chmod +x cookie-sync-server-linux-amd64
 cp config.example.json config.json
 ```
 
-打开 `config.json`，**至少把 `registration_secret` 改成一个随机字符串**：
+Open `config.json` and **at least set `registration_secret` to a random
+string**:
 ```bash
 openssl rand -hex 16
 ```
 
-### 3. 运行
+### 3. Run
 
 ```bash
 ./cookie-sync-server-linux-amd64 -config config.json
 ```
 
-默认监听 `127.0.0.1:8787`，只在本机可访问。
+Listens on `127.0.0.1:8787` by default — local only.
 
-### 4. 用 Cloudflare Tunnel 对外提供服务（推荐）
+### 4. Expose it via Cloudflare Tunnel (recommended)
 
 ```bash
 cloudflared tunnel login
@@ -50,19 +55,20 @@ cloudflared tunnel create cookie-sync
 cloudflared tunnel route dns cookie-sync sync.yourdomain.com
 cloudflared tunnel run --url http://127.0.0.1:8787 cookie-sync
 ```
-不需要在服务器上开放任何入站端口，HTTPS 由 Cloudflare 边缘节点提供。
+No inbound port needed on your server at all; HTTPS is handled by
+Cloudflare's edge.
 
-配好 Tunnel 后，`config.json` 里把 `trust_proxy_header` 设为 `"CF-Connecting-IP"`，
-这样限流会按访客真实 IP 生效。**只有在用 Tunnel、源站没有公网可直连端口的前提下
-这样设置才安全**——如果你是直接开放公网端口只是套了层代理，不要这样设，详见
-[go-server/README.md](go-server/README.md) 里的说明。
+After Tunnel is set up, set `trust_proxy_header` to `"CF-Connecting-IP"` in
+`config.json` so rate limiting works per real visitor IP. **This is only
+safe when using Tunnel with no directly reachable origin port** — see
+[go-server/README.md](go-server/README.md) for why.
 
-### 5. 安装 Chrome 插件
+### 5. Install the Chrome extension
 
-加载 `extension/` 目录（`chrome://extensions` → 开发者模式 → 加载已解压的扩展程序），
-打开插件设置页，填服务器地址，创建频道即可开始使用。
+Load the `extension/` folder (`chrome://extensions` → Developer mode →
+"Load unpacked"), open its settings page, add a channel, and you're set.
 
-## 用 systemd 常驻（生产部署）
+## Run as a systemd service (production)
 
 ```ini
 # /etc/systemd/system/cookie-sync.service
@@ -85,45 +91,48 @@ useradd -r -s /sbin/nologin cookiesync
 systemctl enable --now cookie-sync
 ```
 
-## 从源码构建 / 自己发布 Release
+## Build from source / cut your own release
 
 ```bash
+cd go-server
 go mod tidy
 go build .
 ```
 
-打 tag 会自动触发 CI 交叉编译并发布到 Release：
+Pushing a tag triggers CI to cross-compile and publish a GitHub Release:
 ```bash
-git tag v1.0.1
-git push origin v1.0.1
+git tag v1.0.0
+git push origin v1.0.0
 ```
 
-## 安全设计
+## Security design
 
-| 风险点 | 应对方式 |
+| Risk | Mitigation |
 |---|---|
-| 暴力破解频道密钥 | 基于 IP 的失败次数限流 + bcrypt 慢哈希 |
-| 计时攻击探测频道是否存在 | 频道不存在时也执行一次哑值 bcrypt 校验，抹平耗时差异 |
-| 路径穿越 / 目录枚举 | 频道名 SHA256 哈希后才作为文件名 |
-| 陌生人无限建频道占用资源 | 建频道需要额外的 `registration_secret` 口令 |
-| umask 导致文件权限过松 | 落盘后显式 `chmod 0600`，不依赖系统 umask |
-| 伪造 IP 头绕过限流 | 默认只信任 TCP 连接本身来源，`trust_proxy_header` 需显式配置 |
-| 传输过程明文 | 交给 Cloudflare Tunnel / 反向代理做 TLS，不在本程序范围内 |
+| Brute-forcing a channel key | Per-IP failed-attempt rate limiting + bcrypt (slow hash) |
+| Timing attack to detect whether a channel exists | A dummy bcrypt check always runs even when the channel is missing, equalizing response time |
+| Path traversal / directory enumeration | Channel names are SHA-256 hashed before being used as filenames |
+| Strangers creating unlimited channels | Channel creation requires a `registration_secret` known only to the operator |
+| Loose file permissions from umask | Files are `chmod 0600` explicitly after writing, regardless of the system umask |
+| Forged IP headers bypassing rate limits | Only the raw TCP connection's source is trusted by default; `trust_proxy_header` must be set explicitly |
+| Plaintext transport | Left to Cloudflare Tunnel / your reverse proxy — out of scope for this binary |
 
-更详细的解释和「什么情况下能信任 Cloudflare 的 IP 头」说明，见
-[go-server/README.md](go-server/README.md)。
+Full details, including exactly when it's safe to trust Cloudflare's IP
+header, are in [go-server/README.md](go-server/README.md).
 
-## 已知限制
+## Known limitations
 
-- 数据永久保存，不自动过期，需要清理请手动删除 `data/channels/` 下对应文件
-- 不对存储内容做额外加密，安全性依赖频道密钥保密 + 文件权限
-- 同频道内多人同时上传同一域名会后写覆盖前写，不做合并
-- 限流计数存在内存里，重启进程会清零
+- Data is kept forever; nothing expires automatically — delete files under
+  `data/channels/` manually if needed
+- Cookie contents aren't additionally encrypted at rest; security relies on
+  keeping the channel key secret plus correct file permissions
+- Concurrent uploads to the same domain within a channel overwrite each
+  other, with no merging
+- Rate-limit counters live in memory and reset when the server restarts
 
-## 目录结构
+## Repository layout
 
 ```
-go-server/    Go 服务端源码 + GitHub Actions 工作流
-extension/    Chrome 插件
-server/       PHP 版实现（历史版本，功能对齐但不再更新，需要的话仍可用）
+go-server/    Go server source + GitHub Actions workflows
+extension/    Chrome extension (English/Chinese UI)
 ```

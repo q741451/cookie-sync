@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Cookie Channel Sync - 设置</title>
+<title>Cookie Channel Sync</title>
 <style>
   body { font-family: -apple-system, sans-serif; max-width: 620px; margin: 24px auto; padding: 0 16px; color: #222; }
   h2 { font-size: 16px; margin-top: 28px; border-bottom: 1px solid #eee; padding-bottom: 6px; }
@@ -22,75 +22,87 @@
 </style>
 </head>
 <body>
-  <h2>我的频道</h2>
-  <p class="muted">每个频道各自记录自己的服务器地址——不同频道完全可以属于不同服务器。</p>
+  <h2 data-i18n="options_myChannelsHeading"></h2>
+  <p class="muted" data-i18n="options_myChannelsDesc"></p>
   <table id="channelTable">
-    <thead><tr><th>显示名</th><th>服务器</th><th>频道名</th><th>密钥</th><th>默认</th><th></th></tr></thead>
+    <thead>
+      <tr>
+        <th data-i18n="options_tableLabel"></th>
+        <th data-i18n="options_tableServer"></th>
+        <th data-i18n="options_tableChannelName"></th>
+        <th data-i18n="options_tableKey"></th>
+        <th data-i18n="options_tableDefault"></th>
+        <th></th>
+      </tr>
+    </thead>
     <tbody id="channelTbody"></tbody>
   </table>
 
   <fieldset>
-    <legend>加入已有频道</legend>
-    <label>服务器地址</label>
-    <input id="joinServerUrl" placeholder="https://your-domain.com">
+    <legend data-i18n="options_joinLegend"></legend>
+    <label data-i18n="options_serverUrlLabel"></label>
+    <input id="joinServerUrl" data-i18n-placeholder="options_serverUrlPlaceholder">
     <div class="grid2">
       <div>
-        <label>频道名</label>
-        <input id="joinName" placeholder="小伙伴给你的频道名">
+        <label data-i18n="options_channelNameLabel"></label>
+        <input id="joinName" data-i18n-placeholder="options_joinChannelNamePlaceholder">
       </div>
       <div>
-        <label>频道密钥</label>
-        <input id="joinKey" placeholder="小伙伴给你的频道密钥">
+        <label data-i18n="options_channelKeyLabel"></label>
+        <input id="joinKey" data-i18n-placeholder="options_joinChannelKeyPlaceholder">
       </div>
     </div>
-    <label>显示名（可选，方便自己区分，不填就用频道名）</label>
-    <input id="joinLabel" placeholder="例如：公司团队">
-    <button id="joinBtn" class="secondary">加入</button>
+    <label data-i18n="options_labelOptional"></label>
+    <input id="joinLabel" data-i18n-placeholder="options_joinLabelPlaceholder">
+    <button id="joinBtn" class="secondary" data-i18n="options_joinBtn"></button>
   </fieldset>
 
   <fieldset>
-    <legend>创建新频道</legend>
-    <label>服务器地址</label>
-    <input id="createServerUrl" placeholder="https://your-domain.com">
+    <legend data-i18n="options_createLegend"></legend>
+    <label data-i18n="options_serverUrlLabel"></label>
+    <input id="createServerUrl" data-i18n-placeholder="options_serverUrlPlaceholder">
     <div class="grid2">
       <div>
-        <label>新频道名</label>
-        <input id="newChannelName" placeholder="自己起个名字">
+        <label data-i18n="options_newChannelNameLabel"></label>
+        <input id="newChannelName" data-i18n-placeholder="options_newChannelNamePlaceholder">
       </div>
       <div>
-        <label>建频道口令（如站长设置了）</label>
-        <input id="registerSecret" placeholder="向站长索要">
+        <label data-i18n="options_registerSecretLabel"></label>
+        <input id="registerSecret" data-i18n-placeholder="options_registerSecretPlaceholder">
       </div>
     </div>
-    <label>显示名（可选）</label>
-    <input id="createLabel" placeholder="例如：我自己的">
-    <button id="createNew" class="secondary">创建</button>
+    <label data-i18n="options_labelOptional"></label>
+    <input id="createLabel" data-i18n-placeholder="options_createLabelPlaceholder">
+    <button id="createNew" class="secondary" data-i18n="options_createBtn"></button>
   </fieldset>
 
-  <h2>网站规则</h2>
-  <p class="muted">
-    不设置规则的网站都走上面选中的"默认"频道。需要走特定频道的网站在这里加规则。
-    域名按后缀匹配，比如填 <code>jd.com</code> 会自动匹配 <code>order.jd.com</code>、
-    <code>www.jd.com</code> 等所有子域名。
-  </p>
+  <h2 data-i18n="options_rulesHeading"></h2>
+  <p class="muted" data-i18n="options_rulesDesc"></p>
   <table id="ruleTable">
-    <thead><tr><th>域名（含子域名）</th><th>使用频道</th><th></th></tr></thead>
+    <thead>
+      <tr>
+        <th data-i18n="options_ruleTableDomain"></th>
+        <th data-i18n="options_ruleTableChannel"></th>
+        <th></th>
+      </tr>
+    </thead>
     <tbody id="ruleTbody"></tbody>
   </table>
   <div class="grid2">
     <div>
-      <label>域名</label>
-      <input id="ruleDomain" placeholder="例如 jd.com">
+      <label data-i18n="options_ruleDomainLabel"></label>
+      <input id="ruleDomain" data-i18n-placeholder="options_ruleDomainPlaceholder">
     </div>
     <div>
-      <label>使用频道</label>
+      <label data-i18n="options_ruleChannelLabel"></label>
       <select id="ruleChannelSelect"></select>
     </div>
   </div>
-  <button id="addRuleBtn" class="secondary">添加规则</button>
+  <button id="addRuleBtn" class="secondary" data-i18n="options_addRuleBtn"></button>
 
   <div id="status"></div>
 
+  <script src="i18n.js"></script>
   <script src="storage.js"></script>
   <script src="options.js"></script>
 </body>

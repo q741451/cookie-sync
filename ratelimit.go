@@ -8,9 +8,11 @@ import (
 	"time"
 )
 
-// RateLimiter 是纯内存的滑动窗口限流器。
-// 由于服务是单进程常驻运行（不像 PHP-FPM 那样每个请求可能是独立进程），
-// 直接用内存 map 就够了，不需要落盘，重启后计数自然清零。
+// RateLimiter is a purely in-memory sliding-window limiter.
+// Since the service runs as a single long-lived process (unlike PHP-FPM,
+// where each request may be a separate process), an in-memory map is
+// enough — no need to persist to disk, and counts reset naturally on
+// restart.
 type RateLimiter struct {
 	mu          sync.Mutex
 	attempts    map[string]*attemptRecord
@@ -58,12 +60,13 @@ func (r *RateLimiter) RecordFailure(key string) {
 	rec.count++
 }
 
-// clientIP 决定用什么作为"客户端标识"来做限流。
+// clientIP decides what identity to use for rate limiting.
 //
-// 安全要点：只有当 trustedHeader 非空时才会读取对应请求头（比如 Cloudflare 的
-// CF-Connecting-IP），这个头是客户端能否伪造取决于你的部署方式——
-// 详见 config.go 里 TrustProxyHeader 字段的说明。默认（trustedHeader 为空）
-// 只使用 TCP 连接本身的来源地址，这个是没法伪造的。
+// Security note: trustedHeader is only consulted when non-empty (e.g.
+// Cloudflare's CF-Connecting-IP). Whether that header can be forged depends
+// entirely on your deployment — see the TrustProxyHeader comment in
+// config.go. By default (trustedHeader empty) only the raw TCP connection's
+// source address is used, which cannot be forged.
 func clientIP(r *http.Request, trustedHeader string) string {
 	if trustedHeader != "" {
 		if v := r.Header.Get(trustedHeader); v != "" {

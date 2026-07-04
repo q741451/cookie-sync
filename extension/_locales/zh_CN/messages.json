@@ -1,0 +1,297 @@
+{
+  "extName": {
+    "message": "Cookie 频道同步"
+  },
+  "extDescription": {
+    "message": "按频道号手动同步当前网站的Cookie到自建服务器"
+  },
+  "popup_uploadBtn": {
+    "message": "⬆️ 上传当前网站Cookie"
+  },
+  "popup_downloadBtn": {
+    "message": "⬇️ 下载当前网站Cookie"
+  },
+  "popup_settingsBtn": {
+    "message": "设置服务器 / 频道"
+  },
+  "popup_notWebPage": {
+    "message": "当前页面不是普通网页，无法读取Cookie"
+  },
+  "popup_noChannelHint": {
+    "message": "没有可用频道，请先点击下方“设置”创建/加入一个"
+  },
+  "popup_currentSite": {
+    "message": "当前网站：$SITE$",
+    "placeholders": {
+      "site": {
+        "content": "$1"
+      }
+    }
+  },
+  "popup_usingChannelDefault": {
+    "message": "使用频道：$LABEL$（默认频道）\n服务器：$SERVER$",
+    "placeholders": {
+      "label": {
+        "content": "$1"
+      },
+      "server": {
+        "content": "$2"
+      }
+    }
+  },
+  "popup_usingChannelRule": {
+    "message": "使用频道：$LABEL$（按规则匹配）\n服务器：$SERVER$",
+    "placeholders": {
+      "label": {
+        "content": "$1"
+      },
+      "server": {
+        "content": "$2"
+      }
+    }
+  },
+  "popup_cannotGetSite": {
+    "message": "无法获取当前网站信息"
+  },
+  "popup_needSetup": {
+    "message": "没有可用频道，请先完成设置"
+  },
+  "popup_uploading": {
+    "message": "上传中..."
+  },
+  "popup_downloading": {
+    "message": "下载中..."
+  },
+  "popup_uploadSuccess": {
+    "message": "已上传 $COUNT$ 个 Cookie（频道：$LABEL$）",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "label": {
+        "content": "$2"
+      }
+    }
+  },
+  "popup_uploadFailed": {
+    "message": "上传失败：$ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "popup_downloadFailed": {
+    "message": "下载失败：$ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "popup_restoreSuccess": {
+    "message": "已恢复 $OK$/$TOTAL$ 个 Cookie\n（频道：$LABEL$，更新于 $TIME$）",
+    "placeholders": {
+      "ok": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      },
+      "label": {
+        "content": "$3"
+      },
+      "time": {
+        "content": "$4"
+      }
+    }
+  },
+  "popup_requestError": {
+    "message": "请求出错：$ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_myChannelsHeading": {
+    "message": "我的频道"
+  },
+  "options_myChannelsDesc": {
+    "message": "每个频道各自记录自己的服务器地址——不同频道完全可以属于不同服务器。"
+  },
+  "options_tableLabel": {
+    "message": "显示名"
+  },
+  "options_tableServer": {
+    "message": "服务器"
+  },
+  "options_tableChannelName": {
+    "message": "频道名"
+  },
+  "options_tableKey": {
+    "message": "密钥"
+  },
+  "options_tableDefault": {
+    "message": "默认"
+  },
+  "options_joinLegend": {
+    "message": "加入已有频道"
+  },
+  "options_serverUrlLabel": {
+    "message": "服务器地址"
+  },
+  "options_serverUrlPlaceholder": {
+    "message": "https://your-domain.com"
+  },
+  "options_channelNameLabel": {
+    "message": "频道名"
+  },
+  "options_joinChannelNamePlaceholder": {
+    "message": "小伙伴给你的频道名"
+  },
+  "options_channelKeyLabel": {
+    "message": "频道密钥"
+  },
+  "options_joinChannelKeyPlaceholder": {
+    "message": "小伙伴给你的频道密钥"
+  },
+  "options_labelOptional": {
+    "message": "显示名（可选，方便自己区分，不填就用频道名）"
+  },
+  "options_joinLabelPlaceholder": {
+    "message": "例如：公司团队"
+  },
+  "options_joinBtn": {
+    "message": "加入"
+  },
+  "options_createLegend": {
+    "message": "创建新频道"
+  },
+  "options_newChannelNameLabel": {
+    "message": "新频道名"
+  },
+  "options_newChannelNamePlaceholder": {
+    "message": "自己起个名字"
+  },
+  "options_registerSecretLabel": {
+    "message": "建频道口令（如站长设置了）"
+  },
+  "options_registerSecretPlaceholder": {
+    "message": "向站长索要"
+  },
+  "options_createLabelPlaceholder": {
+    "message": "例如：我自己的"
+  },
+  "options_createBtn": {
+    "message": "创建"
+  },
+  "options_rulesHeading": {
+    "message": "网站规则"
+  },
+  "options_rulesDesc": {
+    "message": "不设置规则的网站都走上面选中的“默认”频道。需要走特定频道的网站在这里加规则。域名按后缀匹配，比如填 jd.com 会自动匹配 order.jd.com、www.jd.com 等所有子域名。"
+  },
+  "options_ruleDomainLabel": {
+    "message": "域名"
+  },
+  "options_ruleDomainPlaceholder": {
+    "message": "例如 jd.com"
+  },
+  "options_ruleChannelLabel": {
+    "message": "使用频道"
+  },
+  "options_addRuleBtn": {
+    "message": "添加规则"
+  },
+  "options_ruleTableDomain": {
+    "message": "域名（含子域名）"
+  },
+  "options_ruleTableChannel": {
+    "message": "使用频道"
+  },
+  "options_deleteBtn": {
+    "message": "删除"
+  },
+  "options_clickToRevealKey": {
+    "message": "点击显示完整密钥"
+  },
+  "options_joinFillAll": {
+    "message": "请把服务器地址、频道名、频道密钥都填上"
+  },
+  "options_insecureWarning": {
+    "message": "警告：服务器地址不是 https:// 开头，Cookie和频道密钥会在网络上明文传输，强烈建议改用HTTPS。"
+  },
+  "options_joinSuccess": {
+    "message": "已加入频道 “$LABEL$”",
+    "placeholders": {
+      "label": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_needServerUrl": {
+    "message": "请填写服务器地址"
+  },
+  "options_needChannelName": {
+    "message": "请填写新频道名"
+  },
+  "options_creating": {
+    "message": "创建中..."
+  },
+  "options_createFailed": {
+    "message": "创建失败：$ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_createSuccess": {
+    "message": "创建成功！\n服务器：$SERVER$\n频道名：$NAME$\n频道密钥：$KEY$\n\n密钥已自动保存到本插件，但强烈建议你自己再抄一份到安全的地方（比如密码管理器），因为服务器不会再次显示这个明文密钥。",
+    "placeholders": {
+      "server": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      },
+      "key": {
+        "content": "$3"
+      }
+    }
+  },
+  "options_requestError": {
+    "message": "请求出错：$ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_confirmDeleteChannel": {
+    "message": "确定删除频道 “$LABEL$” 吗？（只是从本插件移除记录，服务器上的数据不受影响）",
+    "placeholders": {
+      "label": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_needDomain": {
+    "message": "请填写域名"
+  },
+  "options_needChannelForRule": {
+    "message": "请先创建/加入至少一个频道"
+  },
+  "options_ruleAdded": {
+    "message": "已添加规则：$PATTERN$",
+    "placeholders": {
+      "pattern": {
+        "content": "$1"
+      }
+    }
+  },
+  "options_ruleChannelDeleted": {
+    "message": "（频道已被删除）"
+  }
+}
