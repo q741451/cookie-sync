@@ -1,0 +1,79 @@
+name: Release
+
+# 推送形如 v1.0.0 的 tag 时触发：
+#   git tag v1.0.0
+#   git push origin v1.0.0
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+          - goos: windows
+            goarch: amd64
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Tidy modules
+        run: go mod tidy
+
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          mkdir -p dist
+          ext=""
+          if [ "${{ matrix.goos }}" = "windows" ]; then ext=".exe"; fi
+          out="dist/cookie-sync-server-${{ matrix.goos }}-${{ matrix.goarch }}${ext}"
+          go build -trimpath -ldflags="-s -w" -o "$out" .
+          cp config.example.json dist/
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cookie-sync-server-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Flatten into release folder
+        run: |
+          mkdir -p release
+          find artifacts -type f -name 'cookie-sync-server-*' -exec cp {} release/ \;
+          cp artifacts/*/config.example.json release/config.example.json 2>/dev/null || true
+          ls -la release/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*
+          generate_release_notes: true

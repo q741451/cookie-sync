@@ -1,0 +1,10 @@
+{
+  "listen_addr": "127.0.0.1:8787",
+  "data_dir": "./data",
+  "bcrypt_cost": 10,
+  "rate_limit_max_attempts": 10,
+  "rate_limit_window_seconds": 900,
+  "max_channels": 20,
+  "trust_proxy_header": "",
+  "registration_secret": "CHANGE_ME_TO_A_RANDOM_STRING"
+}

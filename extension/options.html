@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Cookie Channel Sync - 设置</title>
+<style>
+  body { font-family: -apple-system, sans-serif; max-width: 480px; margin: 24px auto; padding: 0 16px; color: #222; }
+  h2 { font-size: 16px; margin-top: 24px; }
+  label { display: block; font-size: 13px; color: #555; margin: 10px 0 4px; }
+  input { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
+  button { padding: 8px 14px; margin-top: 10px; cursor: pointer; border: none; border-radius: 4px; background: #2563eb; color: #fff; font-size: 13px; }
+  button.secondary { background: #6b7280; }
+  #status { margin-top: 12px; font-size: 12px; color: #555; word-break: break-all; white-space: pre-wrap; padding: 8px; background: #f5f5f5; border-radius: 4px; min-height: 16px; }
+  hr { margin: 24px 0; border: none; border-top: 1px solid #eee; }
+</style>
+</head>
+<body>
+  <h2>1. 已有频道 - 填写连接信息</h2>
+  <label>服务器地址（例如 https://your-domain.com）</label>
+  <input id="serverUrl" placeholder="https://your-domain.com">
+
+  <label>频道名</label>
+  <input id="channelName" placeholder="例如 my-group">
+
+  <label>频道密钥</label>
+  <input id="channelKey" placeholder="创建频道时获得的密钥">
+
+  <button id="save">保存配置</button>
+
+  <hr>
+
+  <h2>2. 没有频道？创建一个新的</h2>
+  <label>新频道名（自己起，同服务器下不能重复）</label>
+  <input id="newChannelName" placeholder="例如 my-new-group">
+  <label>建频道口令（如果站长设置了 registration_secret，这里必填）</label>
+  <input id="registerSecret" placeholder="向站长索要，不是频道密钥">
+  <button id="createNew" class="secondary">创建新频道</button>
+
+  <div id="status"></div>
+
+  <script src="options.js"></script>
+</body>
+</html>

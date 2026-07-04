@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body { width: 300px; font-family: -apple-system, sans-serif; padding: 14px; color: #222; }
+  #domain { font-size: 12px; color: #888; margin-bottom: 10px; word-break: break-all; }
+  #channel { font-size: 12px; color: #2563eb; margin-bottom: 10px; }
+  button { width: 100%; padding: 9px; margin-bottom: 8px; cursor: pointer; border: none; border-radius: 4px; font-size: 13px; }
+  #upload { background: #2563eb; color: #fff; }
+  #download { background: #059669; color: #fff; }
+  #settingsLink { background: none; color: #888; text-decoration: underline; font-size: 11px; padding: 4px; }
+  #status { font-size: 12px; color: #555; margin-top: 8px; white-space: pre-wrap; word-break: break-all; min-height: 16px; }
+</style>
+</head>
+<body>
+  <div id="domain">加载中...</div>
+  <div id="channel"></div>
+  <button id="upload">⬆️ 上传当前网站Cookie</button>
+  <button id="download">⬇️ 下载当前网站Cookie</button>
+  <div id="status"></div>
+  <button id="settingsLink">设置服务器 / 频道</button>
+  <script src="popup.js"></script>
+</body>
+</html>

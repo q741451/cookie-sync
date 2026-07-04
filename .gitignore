@@ -1,0 +1,5 @@
+config.json
+data/
+dist/
+cookie-sync-server
+cookie-sync-server.exe

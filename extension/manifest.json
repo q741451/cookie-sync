@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Cookie Channel Sync",
+  "version": "1.0.0",
+  "description": "按频道号手动同步当前网站的Cookie到自建服务器",
+  "permissions": ["cookies", "storage", "activeTab"],
+  "host_permissions": ["<all_urls>"],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "options_page": "options.html"
+}
