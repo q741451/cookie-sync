@@ -2,14 +2,10 @@ const domainEl = document.getElementById('domain');
 const channelEl = document.getElementById('channel');
 const statusEl = document.getElementById('status');
 
-async function getConfig() {
-  return chrome.storage.local.get(['serverUrl', 'channelName', 'channelKey']);
-}
-
-function authHeaders(cfg) {
+function authHeaders(channelName, channelKey) {
   return {
-    'X-Channel-Name': cfg.channelName,
-    'X-Channel-Key': cfg.channelKey,
+    'X-Channel-Name': channelName,
+    'X-Channel-Key': channelKey,
   };
 }
 
@@ -23,66 +19,72 @@ function normalizeSameSite(v) {
   return allowed.includes(v) ? v : 'lax';
 }
 
-async function init() {
-  const cfg = await getConfig();
+// 当前网站的 hostname，以及按"网站规则→默认频道"解析出来要用的频道名
+let currentHostname = null;
+let resolvedChannelName = null;
 
-  if (cfg.serverUrl && cfg.channelName) {
-    channelEl.textContent = `频道：${cfg.channelName} @ ${cfg.serverUrl}`;
-  } else {
-    channelEl.textContent = '尚未配置服务器/频道，请点击下方“设置”';
-  }
+async function init() {
+  const cfg = await getFullConfig();
 
   try {
     const tab = await getCurrentTab();
     const url = new URL(tab.url);
     if (!/^https?:$/.test(url.protocol)) {
       domainEl.textContent = '当前页面不是普通网页，无法读取Cookie';
-      return null;
+      channelEl.textContent = '';
+      return;
     }
-    domainEl.textContent = `当前网站：${url.hostname}`;
-    return url.hostname;
+
+    currentHostname = url.hostname;
+    resolvedChannelName = matchChannelForHost(currentHostname, cfg);
+
+    domainEl.textContent = `当前网站：${currentHostname}`;
+
+    if (!resolvedChannelName) {
+      channelEl.textContent = '没有可用频道，请先点击下方"设置"创建/加入一个';
+    } else {
+      const viaRule = isRuleMatch(currentHostname, cfg, resolvedChannelName);
+      channelEl.textContent = `使用频道：${resolvedChannelName}${viaRule ? '（按规则匹配）' : '（默认频道）'}`;
+    }
   } catch (e) {
     domainEl.textContent = '无法获取当前网站信息';
-    return null;
   }
 }
 
-const domainPromise = init();
+const initPromise = init();
 
 document.getElementById('settingsLink').addEventListener('click', () => {
   chrome.runtime.openOptionsPage();
 });
 
 document.getElementById('upload').addEventListener('click', async () => {
-  const cfg = await getConfig();
-  if (!cfg.serverUrl || !cfg.channelName || !cfg.channelKey) {
-    statusEl.textContent = '请先完成设置（服务器地址 / 频道名 / 频道密钥）';
+  await initPromise;
+  const cfg = await getFullConfig();
+
+  if (!cfg.serverUrl || !resolvedChannelName || !cfg.channels[resolvedChannelName]) {
+    statusEl.textContent = '没有可用频道，请先完成设置';
     return;
   }
+  const channelKey = cfg.channels[resolvedChannelName];
 
   const tab = await getCurrentTab();
-  const domain = await domainPromise;
-  if (!domain) return;
-
   statusEl.textContent = '上传中...';
   try {
     // 用 URL 查询而不是用域名字符串查询：
     // chrome.cookies.getAll({domain}) 只会匹配该域名"及其子域名"的cookie，
-    // 查不到设在父域上的cookie（比如 order.jd.com 页面上，很多cookie其实是
-    // 设在父域 .jd.com 上的，用 {domain:"order.jd.com"} 查不出来）。
-    // 用 {url: 完整页面地址} 查询，行为等价于"浏览器打开这个页面时实际会带上
-    // 哪些cookie"，天然包含父域cookie。
+    // 查不到设在父域上的cookie。用 {url: 完整页面地址} 查询，
+    // 等价于"浏览器打开这个页面时实际会带上哪些cookie"，天然包含父域cookie。
     const cookies = await chrome.cookies.getAll({ url: tab.url });
 
     const res = await fetch(`${cfg.serverUrl}/api/upload.php`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeaders(cfg) },
-      body: JSON.stringify({ domain, cookies }),
+      headers: { 'Content-Type': 'application/json', ...authHeaders(resolvedChannelName, channelKey) },
+      body: JSON.stringify({ domain: currentHostname, cookies }),
     });
     const json = await res.json();
 
     statusEl.textContent = res.ok
-      ? `已上传 ${json.count} 个 Cookie（${domain}）`
+      ? `已上传 ${json.count} 个 Cookie（频道：${resolvedChannelName}）`
       : '上传失败：' + json.error;
   } catch (e) {
     statusEl.textContent = '请求出错：' + e.message;
@@ -90,20 +92,20 @@ document.getElementById('upload').addEventListener('click', async () => {
 });
 
 document.getElementById('download').addEventListener('click', async () => {
-  const cfg = await getConfig();
-  if (!cfg.serverUrl || !cfg.channelName || !cfg.channelKey) {
-    statusEl.textContent = '请先完成设置（服务器地址 / 频道名 / 频道密钥）';
+  await initPromise;
+  const cfg = await getFullConfig();
+
+  if (!cfg.serverUrl || !resolvedChannelName || !cfg.channels[resolvedChannelName]) {
+    statusEl.textContent = '没有可用频道，请先完成设置';
     return;
   }
-
-  const domain = await domainPromise;
-  if (!domain) return;
+  const channelKey = cfg.channels[resolvedChannelName];
 
   statusEl.textContent = '下载中...';
   try {
     const res = await fetch(
-      `${cfg.serverUrl}/api/download.php?domain=${encodeURIComponent(domain)}`,
-      { headers: authHeaders(cfg) }
+      `${cfg.serverUrl}/api/download.php?domain=${encodeURIComponent(currentHostname)}`,
+      { headers: authHeaders(resolvedChannelName, channelKey) }
     );
     const json = await res.json();
 
@@ -134,7 +136,7 @@ document.getElementById('download').addEventListener('click', async () => {
     }
 
     const updatedAt = new Date(json.updated_at * 1000).toLocaleString();
-    statusEl.textContent = `已恢复 ${okCount}/${json.cookies.length} 个 Cookie\n（服务器数据更新于 ${updatedAt}）`;
+    statusEl.textContent = `已恢复 ${okCount}/${json.cookies.length} 个 Cookie\n（频道：${resolvedChannelName}，更新于 ${updatedAt}）`;
   } catch (e) {
     statusEl.textContent = '请求出错：' + e.message;
   }

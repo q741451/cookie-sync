@@ -4,40 +4,65 @@
 <meta charset="utf-8">
 <title>Cookie Channel Sync - 设置</title>
 <style>
-  body { font-family: -apple-system, sans-serif; max-width: 480px; margin: 24px auto; padding: 0 16px; color: #222; }
-  h2 { font-size: 16px; margin-top: 24px; }
-  label { display: block; font-size: 13px; color: #555; margin: 10px 0 4px; }
-  input { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
-  button { padding: 8px 14px; margin-top: 10px; cursor: pointer; border: none; border-radius: 4px; background: #2563eb; color: #fff; font-size: 13px; }
+  body { font-family: -apple-system, sans-serif; max-width: 560px; margin: 24px auto; padding: 0 16px; color: #222; }
+  h2 { font-size: 16px; margin-top: 28px; border-bottom: 1px solid #eee; padding-bottom: 6px; }
+  h3 { font-size: 13px; color: #555; margin: 14px 0 4px; }
+  input, select { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
+  button { padding: 8px 14px; margin-top: 8px; cursor: pointer; border: none; border-radius: 4px; background: #2563eb; color: #fff; font-size: 13px; }
   button.secondary { background: #6b7280; }
-  #status { margin-top: 12px; font-size: 12px; color: #555; word-break: break-all; white-space: pre-wrap; padding: 8px; background: #f5f5f5; border-radius: 4px; min-height: 16px; }
-  hr { margin: 24px 0; border: none; border-top: 1px solid #eee; }
+  button.danger { background: #dc2626; padding: 4px 10px; font-size: 12px; margin: 0; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
+  td, th { padding: 6px 4px; border-bottom: 1px solid #eee; text-align: left; }
+  .row { display: flex; gap: 8px; align-items: flex-end; margin-top: 8px; }
+  .row > div { flex: 1; }
+  #status { margin-top: 16px; font-size: 12px; color: #555; word-break: break-all; white-space: pre-wrap; padding: 8px; background: #f5f5f5; border-radius: 4px; min-height: 16px; }
+  .muted { color: #999; font-size: 12px; }
 </style>
 </head>
 <body>
-  <h2>1. 已有频道 - 填写连接信息</h2>
-  <label>服务器地址（例如 https://your-domain.com）</label>
+  <h2>1. 服务器地址</h2>
   <input id="serverUrl" placeholder="https://your-domain.com">
+  <button id="saveServer">保存服务器地址</button>
 
-  <label>频道名</label>
-  <input id="channelName" placeholder="例如 my-group">
+  <h2>2. 我的频道</h2>
+  <table id="channelTable">
+    <thead><tr><th>频道名</th><th>密钥</th><th>默认</th><th></th></tr></thead>
+    <tbody id="channelTbody"></tbody>
+  </table>
 
-  <label>频道密钥</label>
-  <input id="channelKey" placeholder="创建频道时获得的密钥">
+  <h3>加入已有频道（小伙伴给你的频道名 + 密钥）</h3>
+  <div class="row">
+    <div><input id="joinName" placeholder="频道名"></div>
+    <div><input id="joinKey" placeholder="频道密钥"></div>
+    <div><button id="joinBtn" class="secondary">加入</button></div>
+  </div>
 
-  <button id="save">保存配置</button>
+  <h3>创建新频道</h3>
+  <div class="row">
+    <div><input id="newChannelName" placeholder="新频道名"></div>
+    <div><input id="registerSecret" placeholder="建频道口令（如站长设置了）"></div>
+    <div><button id="createNew" class="secondary">创建</button></div>
+  </div>
 
-  <hr>
-
-  <h2>2. 没有频道？创建一个新的</h2>
-  <label>新频道名（自己起，同服务器下不能重复）</label>
-  <input id="newChannelName" placeholder="例如 my-new-group">
-  <label>建频道口令（如果站长设置了 registration_secret，这里必填）</label>
-  <input id="registerSecret" placeholder="向站长索要，不是频道密钥">
-  <button id="createNew" class="secondary">创建新频道</button>
+  <h2>3. 网站规则</h2>
+  <p class="muted">
+    不设置规则的网站都走上面选中的"默认"频道。需要走特定频道的网站在这里加规则。
+    域名按后缀匹配，比如填 <code>jd.com</code> 会自动匹配 <code>order.jd.com</code>、
+    <code>www.jd.com</code> 等所有子域名。
+  </p>
+  <table id="ruleTable">
+    <thead><tr><th>域名（含子域名）</th><th>使用频道</th><th></th></tr></thead>
+    <tbody id="ruleTbody"></tbody>
+  </table>
+  <div class="row">
+    <div><input id="ruleDomain" placeholder="例如 jd.com"></div>
+    <div><select id="ruleChannelSelect"></select></div>
+    <div><button id="addRuleBtn" class="secondary">添加规则</button></div>
+  </div>
 
   <div id="status"></div>
 
+  <script src="storage.js"></script>
   <script src="options.js"></script>
 </body>
 </html>
