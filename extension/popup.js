@@ -60,12 +60,19 @@ document.getElementById('upload').addEventListener('click', async () => {
     return;
   }
 
+  const tab = await getCurrentTab();
   const domain = await domainPromise;
   if (!domain) return;
 
   statusEl.textContent = '上传中...';
   try {
-    const cookies = await chrome.cookies.getAll({ domain });
+    // 用 URL 查询而不是用域名字符串查询：
+    // chrome.cookies.getAll({domain}) 只会匹配该域名"及其子域名"的cookie，
+    // 查不到设在父域上的cookie（比如 order.jd.com 页面上，很多cookie其实是
+    // 设在父域 .jd.com 上的，用 {domain:"order.jd.com"} 查不出来）。
+    // 用 {url: 完整页面地址} 查询，行为等价于"浏览器打开这个页面时实际会带上
+    // 哪些cookie"，天然包含父域cookie。
+    const cookies = await chrome.cookies.getAll({ url: tab.url });
 
     const res = await fetch(`${cfg.serverUrl}/api/upload.php`, {
       method: 'POST',
