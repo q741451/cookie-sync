@@ -19,9 +19,10 @@ function normalizeSameSite(v) {
   return allowed.includes(v) ? v : 'lax';
 }
 
-// 当前网站的 hostname，以及按"网站规则→默认频道"解析出来要用的频道名
+// 当前网站的 hostname，以及按"网站规则→默认频道"解析出来的频道对象
+// （频道对象里自带 serverUrl/channelName/channelKey，不再依赖全局服务器地址）
 let currentHostname = null;
-let resolvedChannelName = null;
+let resolvedChannel = null;
 
 async function init() {
   const cfg = await getFullConfig();
@@ -36,15 +37,18 @@ async function init() {
     }
 
     currentHostname = url.hostname;
-    resolvedChannelName = matchChannelForHost(currentHostname, cfg);
+    const channelId = matchChannelForHost(currentHostname, cfg);
+    resolvedChannel = channelId ? cfg.channels[channelId] : null;
 
     domainEl.textContent = `当前网站：${currentHostname}`;
 
-    if (!resolvedChannelName) {
+    if (!resolvedChannel) {
       channelEl.textContent = '没有可用频道，请先点击下方"设置"创建/加入一个';
     } else {
-      const viaRule = isRuleMatch(currentHostname, cfg, resolvedChannelName);
-      channelEl.textContent = `使用频道：${resolvedChannelName}${viaRule ? '（按规则匹配）' : '（默认频道）'}`;
+      const viaRule = isRuleMatch(currentHostname, cfg, channelId);
+      channelEl.textContent =
+        `使用频道：${resolvedChannel.label}${viaRule ? '（按规则匹配）' : '（默认频道）'}\n` +
+        `服务器：${resolvedChannel.serverUrl}`;
     }
   } catch (e) {
     domainEl.textContent = '无法获取当前网站信息';
@@ -59,13 +63,11 @@ document.getElementById('settingsLink').addEventListener('click', () => {
 
 document.getElementById('upload').addEventListener('click', async () => {
   await initPromise;
-  const cfg = await getFullConfig();
 
-  if (!cfg.serverUrl || !resolvedChannelName || !cfg.channels[resolvedChannelName]) {
+  if (!resolvedChannel) {
     statusEl.textContent = '没有可用频道，请先完成设置';
     return;
   }
-  const channelKey = cfg.channels[resolvedChannelName];
 
   const tab = await getCurrentTab();
   statusEl.textContent = '上传中...';
@@ -76,15 +78,18 @@ document.getElementById('upload').addEventListener('click', async () => {
     // 等价于"浏览器打开这个页面时实际会带上哪些cookie"，天然包含父域cookie。
     const cookies = await chrome.cookies.getAll({ url: tab.url });
 
-    const res = await fetch(`${cfg.serverUrl}/api/upload.php`, {
+    const res = await fetch(`${resolvedChannel.serverUrl}/api/upload.php`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeaders(resolvedChannelName, channelKey) },
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders(resolvedChannel.channelName, resolvedChannel.channelKey),
+      },
       body: JSON.stringify({ domain: currentHostname, cookies }),
     });
     const json = await res.json();
 
     statusEl.textContent = res.ok
-      ? `已上传 ${json.count} 个 Cookie（频道：${resolvedChannelName}）`
+      ? `已上传 ${json.count} 个 Cookie（频道：${resolvedChannel.label}）`
       : '上传失败：' + json.error;
   } catch (e) {
     statusEl.textContent = '请求出错：' + e.message;
@@ -93,19 +98,17 @@ document.getElementById('upload').addEventListener('click', async () => {
 
 document.getElementById('download').addEventListener('click', async () => {
   await initPromise;
-  const cfg = await getFullConfig();
 
-  if (!cfg.serverUrl || !resolvedChannelName || !cfg.channels[resolvedChannelName]) {
+  if (!resolvedChannel) {
     statusEl.textContent = '没有可用频道，请先完成设置';
     return;
   }
-  const channelKey = cfg.channels[resolvedChannelName];
 
   statusEl.textContent = '下载中...';
   try {
     const res = await fetch(
-      `${cfg.serverUrl}/api/download.php?domain=${encodeURIComponent(currentHostname)}`,
-      { headers: authHeaders(resolvedChannelName, channelKey) }
+      `${resolvedChannel.serverUrl}/api/download.php?domain=${encodeURIComponent(currentHostname)}`,
+      { headers: authHeaders(resolvedChannel.channelName, resolvedChannel.channelKey) }
     );
     const json = await res.json();
 
@@ -136,7 +139,7 @@ document.getElementById('download').addEventListener('click', async () => {
     }
 
     const updatedAt = new Date(json.updated_at * 1000).toLocaleString();
-    statusEl.textContent = `已恢复 ${okCount}/${json.cookies.length} 个 Cookie\n（频道：${resolvedChannelName}，更新于 ${updatedAt}）`;
+    statusEl.textContent = `已恢复 ${okCount}/${json.cookies.length} 个 Cookie\n（频道：${resolvedChannel.label}，更新于 ${updatedAt}）`;
   } catch (e) {
     statusEl.textContent = '请求出错：' + e.message;
   }
