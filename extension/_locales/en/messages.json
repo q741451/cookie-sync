@@ -144,6 +144,12 @@
   "options_permRead": {
     "message": "Read-only"
   },
+  "options_keyPrefixWrite": {
+    "message": "W: "
+  },
+  "options_keyPrefixRead": {
+    "message": "R: "
+  },
   "options_tableKey": {
     "message": "Key"
   },

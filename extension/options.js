@@ -58,17 +58,22 @@ async function render() {
     tdPerm.textContent = canUpload(ch) ? t('options_permWrite') : t('options_permRead');
 
     // A channel may hold a write key, a read key, or (rarely, if the user
-    // saved both on the same device) both — show each one that's present.
+    // saved both on the same device) both. The "权限" column already says
+    // read-write/read-only, so here just show the key itself — only add a
+    // short prefix when both are present and need telling apart.
     const tdKey = document.createElement('td');
     const keyEntries = [];
-    if (ch.writeKey) keyEntries.push({ label: t('options_keyTypeWrite'), value: ch.writeKey });
-    if (ch.readKey) keyEntries.push({ label: t('options_keyTypeRead'), value: ch.readKey });
+    if (ch.writeKey) keyEntries.push({ prefix: t('options_keyPrefixWrite'), value: ch.writeKey });
+    if (ch.readKey) keyEntries.push({ prefix: t('options_keyPrefixRead'), value: ch.readKey });
+    const showPrefix = keyEntries.length > 1;
     for (const entry of keyEntries) {
       const line = document.createElement('div');
-      line.textContent = `${entry.label}: ${maskKey(entry.value)}`;
+      line.textContent = (showPrefix ? entry.prefix : '') + maskKey(entry.value);
       line.title = t('options_clickToRevealKey');
       line.style.cursor = 'pointer';
-      line.addEventListener('click', () => { line.textContent = `${entry.label}: ${entry.value}`; });
+      line.addEventListener('click', () => {
+        line.textContent = (showPrefix ? entry.prefix : '') + entry.value;
+      });
       tdKey.appendChild(line);
     }
 

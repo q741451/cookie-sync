@@ -144,6 +144,12 @@
   "options_permRead": {
     "message": "只读"
   },
+  "options_keyPrefixWrite": {
+    "message": "写: "
+  },
+  "options_keyPrefixRead": {
+    "message": "读: "
+  },
   "options_tableKey": {
     "message": "密钥"
   },
