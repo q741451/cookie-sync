@@ -30,6 +30,7 @@
         <th data-i18n="options_tableLabel"></th>
         <th data-i18n="options_tableServer"></th>
         <th data-i18n="options_tableChannelName"></th>
+        <th data-i18n="options_tablePermission"></th>
         <th data-i18n="options_tableKey"></th>
         <th data-i18n="options_tableDefault"></th>
         <th></th>
@@ -52,6 +53,12 @@
         <input id="joinKey" data-i18n-placeholder="options_joinChannelKeyPlaceholder">
       </div>
     </div>
+    <label data-i18n="options_keyTypeLabel"></label>
+    <select id="joinKeyType">
+      <option value="write" data-i18n="options_keyTypeWrite"></option>
+      <option value="read" data-i18n="options_keyTypeRead"></option>
+    </select>
+    <p class="muted" data-i18n="options_keyTypeHint"></p>
     <label data-i18n="options_labelOptional"></label>
     <input id="joinLabel" data-i18n-placeholder="options_joinLabelPlaceholder">
     <button id="joinBtn" class="secondary" data-i18n="options_joinBtn"></button>

@@ -114,6 +114,12 @@
       }
     }
   },
+  "popup_readOnlySuffix": {
+    "message": "\n此设备只有只读密钥，无法上传"
+  },
+  "popup_readOnlyCannotUpload": {
+    "message": "此设备只持有只读密钥，无法上传"
+  },
   "options_myChannelsHeading": {
     "message": "我的频道"
   },
@@ -128,6 +134,15 @@
   },
   "options_tableChannelName": {
     "message": "频道名"
+  },
+  "options_tablePermission": {
+    "message": "权限"
+  },
+  "options_permWrite": {
+    "message": "读写"
+  },
+  "options_permRead": {
+    "message": "只读"
   },
   "options_tableKey": {
     "message": "密钥"
@@ -148,13 +163,25 @@
     "message": "频道名"
   },
   "options_joinChannelNamePlaceholder": {
-    "message": "小伙伴给你的频道名"
+    "message": "已有频道的频道名"
   },
   "options_channelKeyLabel": {
-    "message": "频道密钥"
+    "message": "密钥"
   },
   "options_joinChannelKeyPlaceholder": {
-    "message": "小伙伴给你的频道密钥"
+    "message": "创建频道时生成的读写密钥或只读密钥"
+  },
+  "options_keyTypeLabel": {
+    "message": "这把密钥的类型"
+  },
+  "options_keyTypeWrite": {
+    "message": "读写密钥（可上传 + 下载）"
+  },
+  "options_keyTypeRead": {
+    "message": "只读密钥（仅可下载）"
+  },
+  "options_keyTypeHint": {
+    "message": "填错类型不会造成安全问题——服务器只认密钥本身的权限，这里选错了只是本地显示和按钮状态不准确，随时可以改。"
   },
   "options_labelOptional": {
     "message": "显示名（可选，方便自己区分，不填就用频道名）"
@@ -248,7 +275,7 @@
     }
   },
   "options_createSuccess": {
-    "message": "创建成功！\n服务器：$SERVER$\n频道名：$NAME$\n频道密钥：$KEY$\n\n密钥已自动保存到本插件，但强烈建议你自己再抄一份到安全的地方（比如密码管理器），因为服务器不会再次显示这个明文密钥。",
+    "message": "创建成功！\n服务器：$SERVER$\n频道名：$NAME$\n\n读写密钥（已自动保存在本设备，可上传+下载）：\n$WRITE_KEY$\n\n只读密钥（仅可下载，本设备未保存）：\n$READ_KEY$\n\n服务器不会再次显示这两个明文密钥，请现在就把它们抄到安全的地方（比如密码管理器）。如果你还有其他设备只需要恢复 Cookie、不需要能覆盖数据，可以在那台设备上用“加入已有频道”并选择“只读密钥”。",
     "placeholders": {
       "server": {
         "content": "$1"
@@ -256,8 +283,11 @@
       "name": {
         "content": "$2"
       },
-      "key": {
+      "write_key": {
         "content": "$3"
+      },
+      "read_key": {
+        "content": "$4"
       }
     }
   },

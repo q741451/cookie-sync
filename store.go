@@ -20,11 +20,21 @@ type DomainEntry struct {
 }
 
 // ChannelData is the full content of one channel's file on disk.
+//
+// A channel has two independent keys instead of one:
+//   - WriteKeyHash: can upload (and, since write implies read, also download)
+//   - ReadKeyHash:  can only download; uploading with this key is rejected
+//
+// This lets the owner hand out a read-only key to a device or script that
+// should never be able to overwrite the channel's cookie data, without
+// giving up the ability to also have a full read-write key for trusted
+// devices.
 type ChannelData struct {
-	ChannelName string                 `json:"channel_name"`
-	KeyHash     string                 `json:"key_hash"`
-	CreatedAt   int64                  `json:"created_at"`
-	Domains     map[string]DomainEntry `json:"domains"`
+	ChannelName  string                 `json:"channel_name"`
+	WriteKeyHash string                 `json:"write_key_hash"`
+	ReadKeyHash  string                 `json:"read_key_hash"`
+	CreatedAt    int64                  `json:"created_at"`
+	Domains      map[string]DomainEntry `json:"domains"`
 }
 
 var (
@@ -133,10 +143,11 @@ func (s *Store) writeChannelFile(file string, data *ChannelData) error {
 	return nil
 }
 
-// CreateChannel creates a new channel. The per-channel mutex plus an
-// existence check right before creating avoids a race where two concurrent
-// create requests for the same name could overwrite each other.
-func (s *Store) CreateChannel(name, key string, bcryptCost int) (*ChannelData, error) {
+// CreateChannel creates a new channel with two independent keys. The
+// per-channel mutex plus an existence check right before creating avoids a
+// race where two concurrent create requests for the same name could
+// overwrite each other.
+func (s *Store) CreateChannel(name, writeKey, readKey string, bcryptCost int) (*ChannelData, error) {
 	lock := s.lockFor(name)
 	lock.Lock()
 	defer lock.Unlock()
@@ -148,16 +159,21 @@ func (s *Store) CreateChannel(name, key string, bcryptCost int) (*ChannelData, e
 		return nil, err
 	}
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(key), bcryptCost)
+	writeHash, err := bcrypt.GenerateFromPassword([]byte(writeKey), bcryptCost)
+	if err != nil {
+		return nil, err
+	}
+	readHash, err := bcrypt.GenerateFromPassword([]byte(readKey), bcryptCost)
 	if err != nil {
 		return nil, err
 	}
 
 	data := &ChannelData{
-		ChannelName: name,
-		KeyHash:     string(hash),
-		CreatedAt:   time.Now().Unix(),
-		Domains:     map[string]DomainEntry{},
+		ChannelName:  name,
+		WriteKeyHash: string(writeHash),
+		ReadKeyHash:  string(readHash),
+		CreatedAt:    time.Now().Unix(),
+		Domains:      map[string]DomainEntry{},
 	}
 
 	if err := s.writeChannelFile(file, data); err != nil {

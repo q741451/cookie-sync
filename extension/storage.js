@@ -2,9 +2,17 @@
  * Shared storage / migration / matching logic used by both popup.html and
  * options.html.
  *
- * Storage shape (v3, server address travels with the channel):
- *   channelsV2: {
- *     [channelId]: { label, serverUrl, channelName, channelKey }
+ * Storage shape (v4, read and write are separate credentials):
+ *   channelsV3: {
+ *     [channelId]: {
+ *       label, serverUrl, channelName,
+ *       writeKey,  // string | null — can upload AND download; null if this
+ *                  // device was only ever given a read-only key
+ *       readKey,   // string | null — can only download; null if this
+ *                  // device holds the full write key instead (the write
+ *                  // key already covers reading, so a separate read key
+ *                  // isn't needed on that same device)
+ *     }
  *   }
  *   defaultChannelId: string          which channel is used by default
  *   rulesV2: [{ pattern: "jd.com", channelId: "..." }]   site rules, matched by domain suffix
@@ -12,6 +20,12 @@
  * Channel IDs are randomly generated locally and have nothing to do with the
  * channel name itself — different servers can easily have channels that
  * share the same name, so the name alone can't be a unique key.
+ *
+ * Why two separate keys instead of one: a single key that can both read and
+ * write means every device (or backup copy, or clipboard history) holding
+ * it can silently overwrite your cookie data everywhere. Splitting it lets
+ * you keep one write key on your main device and hand out read-only keys
+ * to anything that should only ever restore, never overwrite.
  */
 
 function genId() {
@@ -21,62 +35,105 @@ function genId() {
 
 // Migrate older extension data formats so nothing gets lost:
 //  - earliest version: a single serverUrl / channelName / channelKey
-//  - previous version: multiple channels{name:key} sharing one serverUrl,
-//    plus rules[{pattern,channel}]
-//  - this version: every channel carries its own serverUrl
+//  - v2: multiple channels{name:key} sharing one serverUrl, plus
+//    rules[{pattern,channel}]
+//  - v3: every channel carries its own serverUrl, single channelKey
+//  - this version (v4): channelKey is split into writeKey/readKey. A
+//    key from any pre-v4 install had full read+write access on the server,
+//    so it's carried forward as writeKey (no capability is lost); readKey
+//    starts empty until the user separately requests a read-only key.
 async function migrateIfNeeded() {
   const data = await chrome.storage.local.get([
-    'channelsV2', 'defaultChannelId', 'rulesV2',
+    'channelsV3', 'defaultChannelId', 'rulesV2',
+    'channelsV2',
     'channels', 'serverUrl', 'defaultChannel', 'rules',
     'channelName', 'channelKey',
   ]);
-  if (data.channelsV2) return; // already on the latest format
+  if (data.channelsV3) return; // already on the latest format
 
-  const channelsV2 = {};
-  const idByOldName = {};
+  // Step 1: get to v3 shape (channelsV2) if not already there.
+  let channelsV2 = data.channelsV2;
+  let defaultChannelId = data.defaultChannelId || '';
+  let rulesV2 = data.rulesV2 || [];
 
-  if (data.channels) {
-    // previous version: multiple channels sharing one serverUrl
-    const serverUrl = data.serverUrl || '';
-    for (const [name, key] of Object.entries(data.channels)) {
+  if (!channelsV2) {
+    channelsV2 = {};
+    const idByOldName = {};
+
+    if (data.channels) {
+      // v2: multiple channels sharing one serverUrl
+      const serverUrl = data.serverUrl || '';
+      for (const [name, key] of Object.entries(data.channels)) {
+        const id = genId();
+        channelsV2[id] = { label: name, serverUrl, channelName: name, channelKey: key };
+        idByOldName[name] = id;
+      }
+    } else if (data.channelName && data.channelKey) {
+      // earliest version: a single channel
       const id = genId();
-      channelsV2[id] = { label: name, serverUrl, channelName: name, channelKey: key };
-      idByOldName[name] = id;
+      channelsV2[id] = {
+        label: data.channelName,
+        serverUrl: data.serverUrl || '',
+        channelName: data.channelName,
+        channelKey: data.channelKey,
+      };
+      idByOldName[data.channelName] = id;
     }
-  } else if (data.channelName && data.channelKey) {
-    // earliest version: a single channel
-    const id = genId();
-    channelsV2[id] = {
-      label: data.channelName,
-      serverUrl: data.serverUrl || '',
-      channelName: data.channelName,
-      channelKey: data.channelKey,
+
+    if (data.defaultChannel && idByOldName[data.defaultChannel]) {
+      defaultChannelId = idByOldName[data.defaultChannel];
+    } else {
+      defaultChannelId = Object.keys(channelsV2)[0] || '';
+    }
+
+    rulesV2 = (data.rules || [])
+      .filter(r => idByOldName[r.channel])
+      .map(r => ({ pattern: r.pattern, channelId: idByOldName[r.channel] }));
+  }
+
+  // Step 2: v3 -> v4, splitting channelKey into writeKey/readKey.
+  const channelsV3 = {};
+  for (const [id, ch] of Object.entries(channelsV2)) {
+    channelsV3[id] = {
+      label: ch.label,
+      serverUrl: ch.serverUrl,
+      channelName: ch.channelName,
+      writeKey: ch.writeKey !== undefined ? ch.writeKey : (ch.channelKey || null),
+      readKey: ch.readKey !== undefined ? ch.readKey : null,
     };
-    idByOldName[data.channelName] = id;
   }
 
-  let defaultChannelId = '';
-  if (data.defaultChannel && idByOldName[data.defaultChannel]) {
-    defaultChannelId = idByOldName[data.defaultChannel];
-  } else {
-    defaultChannelId = Object.keys(channelsV2)[0] || '';
-  }
-
-  const rulesV2 = (data.rules || [])
-    .filter(r => idByOldName[r.channel])
-    .map(r => ({ pattern: r.pattern, channelId: idByOldName[r.channel] }));
-
-  await chrome.storage.local.set({ channelsV2, defaultChannelId, rulesV2 });
+  await chrome.storage.local.set({ channelsV3, defaultChannelId, rulesV2 });
 }
 
 async function getFullConfig() {
   await migrateIfNeeded();
-  const cfg = await chrome.storage.local.get(['channelsV2', 'defaultChannelId', 'rulesV2']);
+  const cfg = await chrome.storage.local.get(['channelsV3', 'defaultChannelId', 'rulesV2']);
   return {
-    channels: cfg.channelsV2 || {},
+    channels: cfg.channelsV3 || {},
     defaultChannelId: cfg.defaultChannelId || '',
     rules: cfg.rulesV2 || [],
   };
+}
+
+// A channel can upload only if this device holds its write key.
+function canUpload(channel) {
+  return !!(channel && channel.writeKey);
+}
+
+// A channel can download if this device holds either key (write implies
+// read on the server side too).
+function canDownload(channel) {
+  return !!(channel && (channel.writeKey || channel.readKey));
+}
+
+// The single credential to send for a given action: prefer the write key
+// (since it also authenticates reads), falling back to the read key for
+// downloads on a read-only device.
+function credentialFor(channel, action) {
+  if (channel.writeKey) return channel.writeKey;
+  if (action === 'download' && channel.readKey) return channel.readKey;
+  return null;
 }
 
 // Resolve which channel ID a hostname should use: rules match by domain
@@ -103,8 +160,9 @@ function isRuleMatch(hostname, cfg, channelId) {
 }
 
 // Create or update a channel. Pass an existing id to update it, or an empty
-// string/null to create a new one. Returns the id that was used.
-async function saveChannel(id, { label, serverUrl, channelName, channelKey }) {
+// string/null to create a new one. writeKey and/or readKey may be null —
+// a device can hold just one of the two. Returns the id that was used.
+async function saveChannel(id, { label, serverUrl, channelName, writeKey, readKey }) {
   const cfg = await getFullConfig();
   const finalId = id || genId();
 
@@ -112,13 +170,14 @@ async function saveChannel(id, { label, serverUrl, channelName, channelKey }) {
     label: label || channelName,
     serverUrl,
     channelName,
-    channelKey,
+    writeKey: writeKey || null,
+    readKey: readKey || null,
   };
 
   let defaultChannelId = cfg.defaultChannelId;
   if (!defaultChannelId) defaultChannelId = finalId; // first channel becomes default automatically
 
-  await chrome.storage.local.set({ channelsV2: cfg.channels, defaultChannelId });
+  await chrome.storage.local.set({ channelsV3: cfg.channels, defaultChannelId });
   return finalId;
 }
 
@@ -134,7 +193,7 @@ async function deleteChannel(id) {
   const rules = cfg.rules.filter(r => r.channelId !== id);
 
   await chrome.storage.local.set({
-    channelsV2: cfg.channels,
+    channelsV3: cfg.channels,
     defaultChannelId,
     rulesV2: rules,
   });

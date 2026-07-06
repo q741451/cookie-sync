@@ -62,8 +62,7 @@ func (s *Server) handleCreateChannel(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Registration secret: the operator's own "master switch", separate
-	// from channel keys. Channel keys are shared with group members to
-	// read/write data; this secret is known only to the operator, and
+	// from channel keys. This secret is known only to the operator, and
 	// prevents strangers from creating unlimited channels on your server.
 	if s.cfg.RegistrationSecret != "" {
 		provided := r.Header.Get("X-Register-Secret")
@@ -96,14 +95,20 @@ func (s *Server) handleCreateChannel(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	key, err := generateChannelKey()
+	writeKey, err := generateChannelKey()
+	if err != nil {
+		log.Printf("generate key error: %v", err)
+		errJSON(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+	readKey, err := generateChannelKey()
 	if err != nil {
 		log.Printf("generate key error: %v", err)
 		errJSON(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 
-	if _, err := s.store.CreateChannel(name, key, s.cfg.BcryptCost); err != nil {
+	if _, err := s.store.CreateChannel(name, writeKey, readKey, s.cfg.BcryptCost); err != nil {
 		if err == ErrChannelExists {
 			errJSON(w, http.StatusConflict, "channel name already taken, please choose another one")
 			return
@@ -113,22 +118,39 @@ func (s *Server) handleCreateChannel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Two independent keys are returned:
+	//   - write_key: can upload and download (full access)
+	//   - read_key:  can only download; a device holding only this key can
+	//     never overwrite this channel's cookie data
+	// Neither is derivable from the other, and the server never stores or
+	// shows either one again after this response.
 	writeJSON(w, http.StatusOK, map[string]string{
 		"channel_name": name,
-		"channel_key":  key,
-		"notice":       "Please save the channel key now. The server will never show the plaintext key again.",
+		"write_key":    writeKey,
+		"read_key":     readKey,
+		"notice":       "Please save both keys now. The server will never show the plaintext keys again.",
 	})
 }
 
-// authenticate checks X-Channel-Name / X-Channel-Key, recording failures
-// against the rate limiter.
+// permission tiers a caller can be authenticated for.
+const (
+	permRead  = "read"  // can download only
+	permWrite = "write" // can upload and download
+)
+
+// authenticate checks X-Channel-Name / X-Channel-Key against a channel's
+// write and read key hashes, and requires at least `need` permission.
+// A write key satisfies a "read" requirement too (write implies read); a
+// read key never satisfies a "write" requirement.
 //
-// Timing safety: a bcrypt check always runs, even when the channel doesn't
-// exist (against a fixed dummy hash), so "channel doesn't exist" and
-// "channel exists but key is wrong" take roughly the same time. This
-// prevents an attacker from telling which channel names are real just by
-// measuring response latency.
-func (s *Server) authenticate(w http.ResponseWriter, r *http.Request) (*ChannelData, bool) {
+// Timing safety: bcrypt checks against *both* the write-key hash and the
+// read-key hash always run, even when the channel doesn't exist (against a
+// fixed dummy hash) or when `need` is "write" and only the read hash would
+// otherwise matter. This keeps "channel doesn't exist", "key doesn't match
+// anything", and "key matches the wrong permission tier" all taking roughly
+// the same amount of time, so an attacker can't distinguish between them
+// just by measuring response latency.
+func (s *Server) authenticate(w http.ResponseWriter, r *http.Request, need string) (*ChannelData, bool) {
 	ip := clientIP(r, s.cfg.TrustProxyHeader)
 	if !s.rl.Allowed(ip) {
 		errJSON(w, http.StatusTooManyRequests, "too many attempts from your IP, please try again later")
@@ -150,14 +172,26 @@ func (s *Server) authenticate(w http.ResponseWriter, r *http.Request) (*ChannelD
 		return nil, false
 	}
 
-	hashToCheck := s.dummyHash
+	writeHashToCheck := s.dummyHash
+	readHashToCheck := s.dummyHash
 	if data != nil {
-		hashToCheck = []byte(data.KeyHash)
+		writeHashToCheck = []byte(data.WriteKeyHash)
+		readHashToCheck = []byte(data.ReadKeyHash)
 	}
-	matchErr := bcrypt.CompareHashAndPassword(hashToCheck, []byte(key))
+	writeMatch := bcrypt.CompareHashAndPassword(writeHashToCheck, []byte(key)) == nil
+	readMatch := bcrypt.CompareHashAndPassword(readHashToCheck, []byte(key)) == nil
 
-	if data == nil || matchErr != nil {
+	granted := data != nil && (writeMatch || (need == permRead && readMatch))
+
+	if !granted {
 		s.rl.RecordFailure(ip)
+		if data != nil && readMatch && need == permWrite {
+			// Correct channel + a real key, just the wrong tier: tell the
+			// caller plainly rather than a generic "invalid" message, since
+			// this isn't a credential-guessing situation.
+			errJSON(w, http.StatusForbidden, "this key is read-only and cannot upload")
+			return nil, false
+		}
 		errJSON(w, http.StatusUnauthorized, "invalid channel name or key")
 		return nil, false
 	}
@@ -171,7 +205,7 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data, ok := s.authenticate(w, r)
+	data, ok := s.authenticate(w, r, permWrite)
 	if !ok {
 		return
 	}
@@ -225,7 +259,7 @@ func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data, ok := s.authenticate(w, r)
+	data, ok := s.authenticate(w, r, permRead)
 	if !ok {
 		return
 	}
@@ -251,7 +285,7 @@ func (s *Server) handleListDomains(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data, ok := s.authenticate(w, r)
+	data, ok := s.authenticate(w, r, permRead)
 	if !ok {
 		return
 	}

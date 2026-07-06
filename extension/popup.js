@@ -1,11 +1,12 @@
 const domainEl = document.getElementById('domain');
 const channelEl = document.getElementById('channel');
 const statusEl = document.getElementById('status');
+const uploadBtn = document.getElementById('upload');
 
-function authHeaders(channelName, channelKey) {
+function authHeaders(channelName, key) {
   return {
     'X-Channel-Name': channelName,
-    'X-Channel-Key': channelKey,
+    'X-Channel-Key': key,
   };
 }
 
@@ -47,10 +48,15 @@ async function init() {
       channelEl.textContent = t('popup_noChannelHint');
     } else {
       const viaRule = isRuleMatch(currentHostname, cfg, channelId);
-      channelEl.textContent = viaRule
+      const suffix = canUpload(resolvedChannel) ? '' : t('popup_readOnlySuffix');
+      channelEl.textContent = (viaRule
         ? t('popup_usingChannelRule', [resolvedChannel.label, resolvedChannel.serverUrl])
-        : t('popup_usingChannelDefault', [resolvedChannel.label, resolvedChannel.serverUrl]);
+        : t('popup_usingChannelDefault', [resolvedChannel.label, resolvedChannel.serverUrl])) + suffix;
     }
+
+    // A device holding only a read-only key can never upload — hide the
+    // button entirely instead of letting the user hit a permission error.
+    uploadBtn.style.display = (resolvedChannel && !canUpload(resolvedChannel)) ? 'none' : '';
   } catch (e) {
     domainEl.textContent = t('popup_cannotGetSite');
   }
@@ -62,11 +68,17 @@ document.getElementById('settingsLink').addEventListener('click', () => {
   chrome.runtime.openOptionsPage();
 });
 
-document.getElementById('upload').addEventListener('click', async () => {
+uploadBtn.addEventListener('click', async () => {
   await initPromise;
 
   if (!resolvedChannel) {
     statusEl.textContent = t('popup_needSetup');
+    return;
+  }
+  if (!canUpload(resolvedChannel)) {
+    // Shouldn't normally be reachable since the button is hidden, but
+    // guard anyway in case resolvedChannel changed between render and click.
+    statusEl.textContent = t('popup_readOnlyCannotUpload');
     return;
   }
 
@@ -84,7 +96,7 @@ document.getElementById('upload').addEventListener('click', async () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...authHeaders(resolvedChannel.channelName, resolvedChannel.channelKey),
+        ...authHeaders(resolvedChannel.channelName, resolvedChannel.writeKey),
       },
       body: JSON.stringify({ domain: currentHostname, cookies }),
     });
@@ -108,9 +120,10 @@ document.getElementById('download').addEventListener('click', async () => {
 
   statusEl.textContent = t('popup_downloading');
   try {
+    const key = credentialFor(resolvedChannel, 'download');
     const res = await fetch(
       `${resolvedChannel.serverUrl}/api/download?domain=${encodeURIComponent(currentHostname)}`,
-      { headers: authHeaders(resolvedChannel.channelName, resolvedChannel.channelKey) }
+      { headers: authHeaders(resolvedChannel.channelName, key) }
     );
     const json = await res.json();
 

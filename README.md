@@ -12,8 +12,8 @@ Go binary plus a Chrome extension, for personal / small-group use.
 ## Features
 
 - 📦 **Zero-dependency single binary** — GitHub Actions cross-compiles Linux / macOS / Windows builds, download straight from Releases
-- 🔑 **Channel name + separate key** two-factor auth; keys are bcrypt-hashed at rest and shown in plaintext only once
-- 👥 **Per-channel isolation** — each channel keeps its own server address, so different groups (or even different servers) never mix; sites can be routed to specific channels via rules, everything else falls back to a default channel
+- 🔑 **Channel name + separate write/read-only keys** — creating a channel generates two independent keys: a write key (upload + download) and a read-only key (download only, can never overwrite data); both are bcrypt-hashed at rest and shown in plaintext only once
+- 👥 **Per-channel isolation** — each channel keeps its own server address, so different uses (or even different servers) never mix; sites can be routed to specific channels via rules, everything else falls back to a default channel
 - 🛡️ Hardened against brute force, timing attacks, path traversal, and umask-related permission leaks (see "Security design" below)
 - 🌐 Rate limiting understands Cloudflare (`CF-Connecting-IP`) natively — no public port needed at all when using Tunnel
 - 🌍 Extension UI available in English and Chinese, following your browser's language
@@ -110,7 +110,8 @@ git push origin v1.0.0
 | Risk | Mitigation |
 |---|---|
 | Brute-forcing a channel key | Per-IP failed-attempt rate limiting + bcrypt (slow hash) |
-| Timing attack to detect whether a channel exists | A dummy bcrypt check always runs even when the channel is missing, equalizing response time |
+| Timing attack to detect whether a channel exists, or which permission tier a key belongs to | The same amount of bcrypt work always runs, whether the channel is missing, the key matches nothing, or the key matches the wrong tier |
+| A single leaked key letting someone overwrite your data | Write and read-only keys are independent and neither is derivable from the other; a read-only key can never be used to upload |
 | Path traversal / directory enumeration | Channel names are SHA-256 hashed before being used as filenames |
 | Strangers creating unlimited channels | Channel creation requires a `registration_secret` known only to the operator |
 | Loose file permissions from umask | Files are `chmod 0600` explicitly after writing, regardless of the system umask |
@@ -120,12 +121,17 @@ git push origin v1.0.0
 Full details, including exactly when it's safe to trust Cloudflare's IP
 header, are in [go-server/README.md](go-server/README.md).
 
+> **Upgrade note**: splitting the single key into write/read-only keys
+> changes the on-disk channel format (`key_hash` became `write_key_hash` /
+> `read_key_hash`). Channels created on an older version will stop
+> authenticating after upgrading — recreate them on the new version.
+
 ## Known limitations
 
 - Data is kept forever; nothing expires automatically — delete files under
   `data/channels/` manually if needed
 - Cookie contents aren't additionally encrypted at rest; security relies on
-  keeping the channel key secret plus correct file permissions
+  keeping keys secret plus correct file permissions
 - Concurrent uploads to the same domain within a channel overwrite each
   other, with no merging
 - Rate-limit counters live in memory and reset when the server restarts

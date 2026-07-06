@@ -114,6 +114,12 @@
       }
     }
   },
+  "popup_readOnlySuffix": {
+    "message": "\nThis device only has a read-only key and can't upload"
+  },
+  "popup_readOnlyCannotUpload": {
+    "message": "This device only holds a read-only key and can't upload"
+  },
   "options_myChannelsHeading": {
     "message": "My Channels"
   },
@@ -128,6 +134,15 @@
   },
   "options_tableChannelName": {
     "message": "Channel name"
+  },
+  "options_tablePermission": {
+    "message": "Permission"
+  },
+  "options_permWrite": {
+    "message": "Read-write"
+  },
+  "options_permRead": {
+    "message": "Read-only"
   },
   "options_tableKey": {
     "message": "Key"
@@ -148,13 +163,25 @@
     "message": "Channel name"
   },
   "options_joinChannelNamePlaceholder": {
-    "message": "Channel name from your friend"
+    "message": "Name of an existing channel"
   },
   "options_channelKeyLabel": {
-    "message": "Channel key"
+    "message": "Key"
   },
   "options_joinChannelKeyPlaceholder": {
-    "message": "Channel key from your friend"
+    "message": "The write key or read-only key from when the channel was created"
+  },
+  "options_keyTypeLabel": {
+    "message": "Type of this key"
+  },
+  "options_keyTypeWrite": {
+    "message": "Write key (can upload + download)"
+  },
+  "options_keyTypeRead": {
+    "message": "Read-only key (download only)"
+  },
+  "options_keyTypeHint": {
+    "message": "Getting this wrong isn't a security issue — the server only ever honors what the key itself is allowed to do. Picking the wrong type here just makes the local display and button state inaccurate, and you can change it anytime."
   },
   "options_labelOptional": {
     "message": "Label (optional, just for your own reference; defaults to the channel name)"
@@ -248,7 +275,7 @@
     }
   },
   "options_createSuccess": {
-    "message": "Created successfully!\nServer: $SERVER$\nChannel name: $NAME$\nChannel key: $KEY$\n\nThe key has been saved in this extension automatically, but you should also back it up somewhere safe (e.g. a password manager) — the server will never show this plaintext key again.",
+    "message": "Created successfully!\nServer: $SERVER$\nChannel name: $NAME$\n\nWrite key (saved on this device automatically, can upload + download):\n$WRITE_KEY$\n\nRead-only key (download only, not saved on this device):\n$READ_KEY$\n\nThe server will never show either plaintext key again — back both up somewhere safe (e.g. a password manager) now. If you have another device that should only ever restore cookies and never overwrite them, use \"Join an existing channel\" there with the read-only key.",
     "placeholders": {
       "server": {
         "content": "$1"
@@ -256,8 +283,11 @@
       "name": {
         "content": "$2"
       },
-      "key": {
+      "write_key": {
         "content": "$3"
+      },
+      "read_key": {
+        "content": "$4"
       }
     }
   },

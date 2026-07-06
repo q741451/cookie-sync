@@ -4,6 +4,7 @@ const els = {
   joinServerUrl: document.getElementById('joinServerUrl'),
   joinName: document.getElementById('joinName'),
   joinKey: document.getElementById('joinKey'),
+  joinKeyType: document.getElementById('joinKeyType'),
   joinLabel: document.getElementById('joinLabel'),
   joinBtn: document.getElementById('joinBtn'),
 
@@ -53,11 +54,23 @@ async function render() {
     const tdName = document.createElement('td');
     tdName.textContent = ch.channelName;
 
+    const tdPerm = document.createElement('td');
+    tdPerm.textContent = canUpload(ch) ? t('options_permWrite') : t('options_permRead');
+
+    // A channel may hold a write key, a read key, or (rarely, if the user
+    // saved both on the same device) both — show each one that's present.
     const tdKey = document.createElement('td');
-    tdKey.textContent = maskKey(ch.channelKey);
-    tdKey.title = t('options_clickToRevealKey');
-    tdKey.style.cursor = 'pointer';
-    tdKey.addEventListener('click', () => { tdKey.textContent = ch.channelKey; });
+    const keyEntries = [];
+    if (ch.writeKey) keyEntries.push({ label: t('options_keyTypeWrite'), value: ch.writeKey });
+    if (ch.readKey) keyEntries.push({ label: t('options_keyTypeRead'), value: ch.readKey });
+    for (const entry of keyEntries) {
+      const line = document.createElement('div');
+      line.textContent = `${entry.label}: ${maskKey(entry.value)}`;
+      line.title = t('options_clickToRevealKey');
+      line.style.cursor = 'pointer';
+      line.addEventListener('click', () => { line.textContent = `${entry.label}: ${entry.value}`; });
+      tdKey.appendChild(line);
+    }
 
     const tdDefault = document.createElement('td');
     const radio = document.createElement('input');
@@ -82,7 +95,7 @@ async function render() {
     });
     tdDel.appendChild(delBtn);
 
-    tr.append(tdLabel, tdServer, tdName, tdKey, tdDefault, tdDel);
+    tr.append(tdLabel, tdServer, tdName, tdPerm, tdKey, tdDefault, tdDel);
     els.channelTbody.appendChild(tr);
   }
 
@@ -134,6 +147,7 @@ els.joinBtn.addEventListener('click', async () => {
   const serverUrl = normalizeServerUrl(els.joinServerUrl.value);
   const name = els.joinName.value.trim();
   const key = els.joinKey.value.trim();
+  const keyType = els.joinKeyType.value; // 'write' or 'read'
   const label = els.joinLabel.value.trim();
 
   if (!serverUrl || !name || !key) {
@@ -143,7 +157,13 @@ els.joinBtn.addEventListener('click', async () => {
 
   const warned = warnIfInsecure(serverUrl);
 
-  await saveChannel(null, { label, serverUrl, channelName: name, channelKey: key });
+  await saveChannel(null, {
+    label,
+    serverUrl,
+    channelName: name,
+    writeKey: keyType === 'write' ? key : null,
+    readKey: keyType === 'read' ? key : null,
+  });
 
   els.joinServerUrl.value = '';
   els.joinName.value = '';
@@ -188,18 +208,25 @@ els.createNew.addEventListener('click', async () => {
       return;
     }
 
+    // This device becomes the "main" device for the new channel and keeps
+    // the write key (full access). The read_key is shown below so the user
+    // can separately set it up on another device via "Join an existing
+    // channel" → "Read-only key" if they want a restore-only copy.
     await saveChannel(null, {
       label,
       serverUrl,
       channelName: json.channel_name,
-      channelKey: json.channel_key,
+      writeKey: json.write_key,
+      readKey: null,
     });
 
     els.newChannelName.value = '';
     els.registerSecret.value = '';
     els.createLabel.value = '';
 
-    els.status.textContent = t('options_createSuccess', [serverUrl, json.channel_name, json.channel_key]);
+    els.status.textContent = t('options_createSuccess', [
+      serverUrl, json.channel_name, json.write_key, json.read_key,
+    ]);
     render();
   } catch (e) {
     els.status.textContent = t('options_requestError', [e.message]);
