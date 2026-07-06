@@ -1,4 +1,4 @@
-# Privacy Policy / 隐私权政策
+﻿# Privacy Policy / 隐私权政策
 
 **Cookie Channel Sync ("Cookie 频道同步")**
 
@@ -71,7 +71,7 @@ URL with a new "Last updated" date.
 ### Contact
 
 Questions about this policy or the extension can be raised via the GitHub
-repository's Issues page: `<在这里换成你的仓库 Issues 链接>`
+repository's Issues page: `https://github.com/q741451/cookie-sync/issues`
 
 ---
 
@@ -129,4 +129,4 @@ Cookie，并写回你的浏览器。
 ### 联系方式
 
 对本政策或插件有任何疑问，可以通过 GitHub 仓库的 Issues 页面反馈：
-`<在这里换成你的仓库 Issues 链接>`
+`https://github.com/q741451/cookie-sync/issues`
