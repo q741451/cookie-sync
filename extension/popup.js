@@ -15,6 +15,19 @@ async function getCurrentTab() {
   return tab;
 }
 
+// In the default "spanning" incognito mode, this popup script always runs in
+// the extension's regular (non-incognito) context, even when opened from an
+// incognito window. chrome.cookies.set/getAll default to that context's
+// cookie store if no storeId is given — meaning they'd silently read/write
+// the *normal* cookie jar instead of the incognito tab's own memory-only
+// store. We look up the store that actually contains this tab's id and pass
+// it explicitly so cookie reads/writes land in the right place.
+async function getStoreIdForTab(tab) {
+  const stores = await chrome.cookies.getAllCookieStores();
+  const match = stores.find((s) => s.tabIds.includes(tab.id));
+  return match ? match.id : undefined;
+}
+
 function normalizeSameSite(v) {
   const allowed = ['no_restriction', 'lax', 'strict', 'unspecified'];
   return allowed.includes(v) ? v : 'lax';
@@ -90,7 +103,8 @@ uploadBtn.addEventListener('click', async () => {
     // subdomains, so it misses cookies set on a parent domain. Querying by
     // {url: full page address} matches what the browser would actually send
     // for that page, which naturally includes parent-domain cookies.
-    const cookies = await chrome.cookies.getAll({ url: tab.url });
+    const storeId = await getStoreIdForTab(tab);
+    const cookies = await chrome.cookies.getAll({ url: tab.url, storeId });
 
     const res = await fetch(`${resolvedChannel.serverUrl}/api/upload`, {
       method: 'POST',
@@ -120,6 +134,7 @@ document.getElementById('download').addEventListener('click', async () => {
 
   statusEl.textContent = t('popup_downloading');
   try {
+    const tab = await getCurrentTab();
     const key = credentialFor(resolvedChannel, 'download');
     const res = await fetch(
       `${resolvedChannel.serverUrl}/api/download?domain=${encodeURIComponent(currentHostname)}`,
@@ -133,6 +148,7 @@ document.getElementById('download').addEventListener('click', async () => {
     }
 
     let okCount = 0;
+    const storeId = await getStoreIdForTab(tab);
     for (const c of json.cookies) {
       try {
         const bareDomain = c.domain.replace(/^\./, '');
@@ -146,6 +162,7 @@ document.getElementById('download').addEventListener('click', async () => {
           httpOnly: c.httpOnly,
           sameSite: normalizeSameSite(c.sameSite),
           expirationDate: c.expirationDate,
+          storeId,
         });
         okCount++;
       } catch (err) {
