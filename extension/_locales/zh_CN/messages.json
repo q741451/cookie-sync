@@ -329,5 +329,32 @@
   },
   "options_ruleChannelDeleted": {
     "message": "（频道已被删除）"
+  },
+  "options_syncHeading": {
+    "message": "跨设备同步"
+  },
+  "options_syncDesc": {
+    "message": "开启后，本设备的 channel 与站点规则（含读写 key）会通过你的 Chrome/Google 账号同步到其他浏览器，而不再只留在本机。key 会经过 Google 的同步基础设施传输——请确认你能接受这一点后再开启。"
+  },
+  "options_syncToggleLabel": {
+    "message": "跨设备同步我的 channel 与规则（通过 Chrome 账号）"
+  },
+  "options_syncStatusOn": {
+    "message": "同步已开启，此处的修改会出现在你其他已同步的设备上。"
+  },
+  "options_syncStatusOff": {
+    "message": "同步已关闭，本设备的配置仅保存在本机。"
+  },
+  "options_syncWorking": {
+    "message": "处理中…"
+  },
+  "options_syncSeeded": {
+    "message": "同步已开启，本设备的配置将作为其他设备的起始数据。"
+  },
+  "options_syncAdopted": {
+    "message": "同步已开启，发现了其他设备已同步的配置，已加载到本机。"
+  },
+  "options_syncQuotaExceeded": {
+    "message": "同步失败：channel/规则数据超过了 Chrome 同步存储的容量限制，请精简后重试，或保持同步关闭。"
   }
 }

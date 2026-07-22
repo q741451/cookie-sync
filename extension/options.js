@@ -1,4 +1,7 @@
 const els = {
+  syncToggle: document.getElementById('syncToggle'),
+  syncStatus: document.getElementById('syncStatus'),
+
   channelTbody: document.getElementById('channelTbody'),
 
   joinServerUrl: document.getElementById('joinServerUrl'),
@@ -34,6 +37,54 @@ function maskKey(key) {
   if (!key || key.length <= 8) return '\u2022\u2022\u2022\u2022';
   return key.slice(0, 4) + '\u2026' + key.slice(-4);
 }
+
+async function renderSyncSection() {
+  const enabled = await isSyncEnabled();
+  els.syncToggle.checked = enabled;
+  els.syncStatus.textContent = enabled
+    ? t('options_syncStatusOn')
+    : t('options_syncStatusOff');
+}
+
+els.syncToggle.addEventListener('change', async () => {
+  const wantEnabled = els.syncToggle.checked;
+  els.syncToggle.disabled = true;
+  els.syncStatus.textContent = t('options_syncWorking');
+
+  try {
+    const result = await setSyncEnabled(wantEnabled);
+    if (result.action === 'seeded') {
+      els.syncStatus.textContent = t('options_syncSeeded');
+    } else if (result.action === 'adopted') {
+      els.syncStatus.textContent = t('options_syncAdopted');
+    } else {
+      els.syncStatus.textContent = t('options_syncStatusOff');
+    }
+  } catch (e) {
+    els.syncToggle.checked = !wantEnabled; // revert the visual toggle
+    els.syncStatus.textContent = (e instanceof SyncQuotaError)
+      ? t('options_syncQuotaExceeded')
+      : t('options_requestError', [e.message]);
+  } finally {
+    els.syncToggle.disabled = false;
+  }
+
+  render();
+});
+
+// If another device pushes a change through chrome.storage.sync while this
+// options page is open, reflect it immediately instead of showing a stale
+// table until the next manual action.
+chrome.storage.onChanged.addListener(async (changes, areaName) => {
+  const enabled = await isSyncEnabled();
+  const relevantArea = enabled ? 'sync' : 'local';
+  if (areaName !== relevantArea) return;
+
+  const touchesSchema = Object.keys(changes).some(
+    (k) => k === 'defaultChannelId' || k.startsWith('ch:') || k.startsWith('rule:')
+  );
+  if (touchesSchema) render();
+});
 
 async function render() {
   const cfg = await getFullConfig();
@@ -162,13 +213,20 @@ els.joinBtn.addEventListener('click', async () => {
 
   const warned = warnIfInsecure(serverUrl);
 
-  await saveChannel(null, {
-    label,
-    serverUrl,
-    channelName: name,
-    writeKey: keyType === 'write' ? key : null,
-    readKey: keyType === 'read' ? key : null,
-  });
+  try {
+    await saveChannel(null, {
+      label,
+      serverUrl,
+      channelName: name,
+      writeKey: keyType === 'write' ? key : null,
+      readKey: keyType === 'read' ? key : null,
+    });
+  } catch (e) {
+    els.status.textContent = (e instanceof SyncQuotaError)
+      ? t('options_syncQuotaExceeded')
+      : t('options_requestError', [e.message]);
+    return;
+  }
 
   els.joinServerUrl.value = '';
   els.joinName.value = '';
@@ -234,7 +292,9 @@ els.createNew.addEventListener('click', async () => {
     ]);
     render();
   } catch (e) {
-    els.status.textContent = t('options_requestError', [e.message]);
+    els.status.textContent = (e instanceof SyncQuotaError)
+      ? t('options_syncQuotaExceeded')
+      : t('options_requestError', [e.message]);
   }
 });
 
@@ -251,10 +311,18 @@ els.addRuleBtn.addEventListener('click', async () => {
     return;
   }
 
-  await addRule(pattern, channelId);
+  try {
+    await addRule(pattern, channelId);
+  } catch (e) {
+    els.status.textContent = (e instanceof SyncQuotaError)
+      ? t('options_syncQuotaExceeded')
+      : t('options_requestError', [e.message]);
+    return;
+  }
   els.ruleDomain.value = '';
   els.status.textContent = t('options_ruleAdded', [pattern]);
   render();
 });
 
+renderSyncSection();
 render();

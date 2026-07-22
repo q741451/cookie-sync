@@ -329,5 +329,32 @@
   },
   "options_ruleChannelDeleted": {
     "message": "(channel deleted)"
+  },
+  "options_syncHeading": {
+    "message": "Cross-device sync"
+  },
+  "options_syncDesc": {
+    "message": "When enabled, this device's channels and site rules (including write/read keys) are synced across your browsers via your Chrome/Google account, instead of staying only on this device. Keys will pass through Google's sync infrastructure — only enable this if you're comfortable with that."
+  },
+  "options_syncToggleLabel": {
+    "message": "Sync my channels and rules across devices (via Chrome account)"
+  },
+  "options_syncStatusOn": {
+    "message": "Sync is on. Changes made here will appear on your other synced devices."
+  },
+  "options_syncStatusOff": {
+    "message": "Sync is off. This device's config stays local only."
+  },
+  "options_syncWorking": {
+    "message": "Working…"
+  },
+  "options_syncSeeded": {
+    "message": "Sync enabled. This device's config is now the starting point for your other devices."
+  },
+  "options_syncAdopted": {
+    "message": "Sync enabled. Found an existing synced config from another device and loaded it here."
+  },
+  "options_syncQuotaExceeded": {
+    "message": "Couldn't sync: your channels/rules are too large for Chrome's sync storage limit. Try removing some, or keep sync off."
   }
 }
