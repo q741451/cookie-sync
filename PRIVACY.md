@@ -2,7 +2,7 @@
 
 **Cookie Channel Sync ("Cookie 频道同步")**
 
-Last updated: 2026-07-06 / 最后更新：2026-07-06
+Last updated: 2026-07-22 / 最后更新：2026-07-22
 
 ---
 
@@ -23,7 +23,9 @@ background or automatic syncing.
   cookies to act on.
 - **Your channel configuration** (server address, channel name, and the
   write/read-only key you were given when the channel was created), stored
-  locally in your browser via `chrome.storage.local`.
+  via Chrome's `storage` API -- locally on this device by default, or synced
+  across your devices through your Chrome/Google account if you turn on
+  Cross-device sync in the options page (see below).
 
 ### Where your data goes
 
@@ -38,6 +40,25 @@ your browser.
 receive your cookies or configuration data, and has no access to any data
 you sync.** All data goes directly from your browser to the server address
 you typed in — nowhere else.
+
+### Cross-device sync (optional)
+
+The options page has an optional **Cross-device sync** toggle, off by
+default. Turning it on stores your channel configuration -- including
+write/read-only keys -- in `chrome.storage.sync` instead of
+`chrome.storage.local`, so Chrome syncs it to your other signed-in browsers
+the same way it syncs bookmarks or settings. This means:
+
+- Your channel keys pass through Google's sync infrastructure, in addition
+  to your own server.
+- Anyone signed into the same Chrome/Google account (including on a shared
+  or public computer) will also get this configuration.
+- The developer of this extension has no visibility into and does not
+  operate Chrome's sync service -- this is entirely between your browser
+  and your Google account, governed by Google's own privacy policy.
+
+You can turn this off at any time from the options page; doing so switches
+this device back to a local-only copy of your configuration.
 
 ### What this extension does not do
 
@@ -89,7 +110,9 @@ Cookie 频道同步可以让你把自己浏览器里的 Cookie，手动备份到
   `cookies` API 读取或写入。
 - **当前标签页的网址**：仅用于判断要操作哪个网站的 Cookie。
 - **你的频道配置**（服务器地址、频道名，以及创建频道时获得的读写密钥/只
-  读密钥）：通过 `chrome.storage.local` 保存在你本地浏览器中。
+  读密钥）：通过 Chrome 的 `storage` API 保存。默认仅保存在本机；如果你在
+  设置页面开启"跨设备同步"，则会通过你的 Chrome/Google 账号同步到你的其他
+  设备（详见下文）。
 
 ### 数据会去哪里
 
@@ -101,6 +124,21 @@ Cookie，并写回你的浏览器。
 **本插件的开发者不运营任何服务器，不会收到你的 Cookie 或配置数据，对你同
 步的任何数据都没有访问权限。** 所有数据都是从你的浏览器直接发送到你自己
 填写的服务器地址，不会经过其他任何地方。
+
+### 跨设备同步（可选功能）
+
+设置页面提供一个可选的**跨设备同步**开关，默认关闭。开启后，你的频道配置
+（包括读写密钥）会保存到 `chrome.storage.sync`，而不是
+`chrome.storage.local`——Chrome 会像同步书签、设置那样，把它同步到你其他
+已登录的浏览器。这意味着：
+
+- 你的频道密钥除了发往你自己的服务器外，还会经过 Google 的同步基础设施。
+- 登录同一个 Chrome/Google 账号的任何设备（包括共用或公共电脑）也会拿到
+  这份配置。
+- 插件开发者无法看到、也不运营 Chrome 的同步服务——这完全是你的浏览器与
+  你的 Google 账号之间的事情，受 Google 自身隐私政策约束。
+
+你可以随时在设置页面关闭该开关，关闭后本设备会切回仅保存本地的配置副本。
 
 ### 这个插件不会做什么
 

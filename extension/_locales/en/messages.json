@@ -334,25 +334,25 @@
     "message": "Cross-device sync"
   },
   "options_syncDesc": {
-    "message": "When enabled, this device's channels and site rules (including write/read keys) are synced across your browsers via your Chrome/Google account, instead of staying only on this device. Keys will pass through Google's sync infrastructure — only enable this if you're comfortable with that."
+    "message": "Syncs your channels and keys across browsers via your Chrome account."
   },
   "options_syncToggleLabel": {
-    "message": "Sync my channels and rules across devices (via Chrome account)"
+    "message": "Enable cross-device sync"
   },
   "options_syncStatusOn": {
-    "message": "Sync is on. Changes made here will appear on your other synced devices."
+    "message": "On — synced via your Chrome account."
   },
   "options_syncStatusOff": {
-    "message": "Sync is off. This device's config stays local only."
+    "message": "Off — this device only."
   },
   "options_syncWorking": {
     "message": "Working…"
   },
   "options_syncSeeded": {
-    "message": "Sync enabled. This device's config is now the starting point for your other devices."
+    "message": "Synced. This device's config is now shared."
   },
   "options_syncAdopted": {
-    "message": "Sync enabled. Found an existing synced config from another device and loaded it here."
+    "message": "Synced. Loaded config from another device."
   },
   "options_syncQuotaExceeded": {
     "message": "Couldn't sync: your channels/rules are too large for Chrome's sync storage limit. Try removing some, or keep sync off."
